@@ -55,7 +55,7 @@ class _MapPageState extends State<MapPage> {
     final data = jsonDecode(event);
     final String type = data['type'];
     switch (type) {
-      case 'ROUTES_REFRESH':
+      case 'ROUTE_RESET':
         _onRoutesRefresh(data['data']);
     }
   }
@@ -140,7 +140,7 @@ class _MapPageState extends State<MapPage> {
   @override
   Widget build(BuildContext context) {
     // TODO: implement selected route options
-    //  final String? selectedId = _selectedRoute?.route.id;
+    // final String? selectedId = _selectedRoute?.route.id;
 
     return Scaffold(
       appBar: AppBar(

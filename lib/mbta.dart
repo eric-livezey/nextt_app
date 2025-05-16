@@ -4,18 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class Shape {
+  final String routeId;
   final String id;
   final List<LatLng> points;
-  final String routeId;
 
   factory Shape.fromJson(Map<String, dynamic> data, String routeId) {
     final String id = data['id'];
-    final List<LatLng> points =
-        data['polyline'] != null ? decodePolyline(data['polyline']) : [];
-    return Shape._internal(id, points, routeId);
+    final List<LatLng> points = data['polyline'] != null ? decodePolyline(data['polyline']) : [];
+    return Shape._internal(routeId: routeId, id: id, points: points);
   }
 
-  const Shape._internal(this.id, this.points, this.routeId);
+  const Shape._internal({
+    required this.routeId,
+    required this.id,
+    this.points = const [],
+  });
 }
 
 enum RouteType { lightRail, heavyRail, commuterRail, bus, ferry }
@@ -23,7 +26,6 @@ enum RouteType { lightRail, heavyRail, commuterRail, bus, ferry }
 class Route {
   final String id;
   final RouteType type;
-  final List<Shape> shapes;
   final Color? textColor;
   final int? sortOrder;
   final String? shortName;
@@ -33,6 +35,7 @@ class Route {
   final List<String>? directionDestinations;
   final String? description;
   final Color? color;
+  final List<Shape> shapes;
 
   factory Route.fromJson(Map<String, dynamic> data) {
     final String id = data['id'];
@@ -44,10 +47,6 @@ class Route {
       4 => RouteType.ferry,
       _ => throw TypeError,
     };
-    final List shapeData = data['shapes'] ?? [];
-    final List<Shape> shapes = shapeData
-        .map((data) => Shape.fromJson(data, id))
-        .toList(growable: false);
     final Color? textColor =
         data['textColor'] != null ? tryParseColor(data['textColor']) : null;
     final int? sortOrder = data['sortOrder'];
@@ -59,10 +58,13 @@ class Route {
     final String? description = data['description'];
     final Color? color =
         data['color'] != null ? tryParseColor(data['color']) : null;
+    final List shapeData = data['shapes'] ?? [];
+    final List<Shape> shapes = shapeData
+        .map((data) => Shape.fromJson(data, id))
+        .toList();
     return Route._internal(
       id: id,
       type: type,
-      shapes: shapes,
       textColor: textColor,
       sortOrder: sortOrder,
       shortName: shortName,
@@ -72,13 +74,13 @@ class Route {
       directionDestinations: directionDestinations,
       description: description,
       color: color,
+      shapes: shapes,
     );
   }
 
   const Route._internal({
     required this.id,
     required this.type,
-    required this.shapes,
     this.textColor,
     this.sortOrder,
     this.shortName,
@@ -88,6 +90,7 @@ class Route {
     this.directionDestinations,
     this.description,
     this.color,
+    this.shapes = const [],
   });
 }
 
