@@ -8,9 +8,10 @@ class Shape {
   final String id;
   final List<LatLng> points;
 
-  factory Shape.fromJson(Map<String, dynamic> data, String routeId) {
+  factory Shape.fromJson(data, String routeId) {
     final String id = data['id'];
-    final List<LatLng> points = data['polyline'] != null ? decodePolyline(data['polyline']) : [];
+    final List<LatLng> points =
+        data['polyline'] != null ? decodePolyline(data['polyline']) : [];
     return Shape._internal(routeId: routeId, id: id, points: points);
   }
 
@@ -37,7 +38,7 @@ class Route {
   final Color? color;
   final List<Shape> shapes;
 
-  factory Route.fromJson(Map<String, dynamic> data) {
+  factory Route.fromJson(data) {
     final String id = data['id'];
     final RouteType type = switch (data['type']) {
       0 => RouteType.lightRail,
@@ -59,9 +60,8 @@ class Route {
     final Color? color =
         data['color'] != null ? tryParseColor(data['color']) : null;
     final List shapeData = data['shapes'] ?? [];
-    final List<Shape> shapes = shapeData
-        .map((data) => Shape.fromJson(data, id))
-        .toList();
+    final List<Shape> shapes =
+        shapeData.map((data) => Shape.fromJson(data, id)).toList();
     return Route._internal(
       id: id,
       type: type,
@@ -94,6 +94,73 @@ class Route {
   });
 }
 
+class Vehicle {
+  final String routeId;
+  final String id;
+  final DateTime? updatedAt;
+  final double? speed;
+  final String? revenueStatus;
+  final String? occupancyStatus;
+  final double longitude;
+  final double latitude;
+  final String? label;
+  final int? directionId;
+  final int? currentStopSequence;
+  final String? currentStatus;
+  final List carriages;
+  final int bearing;
+
+  factory Vehicle.fromJson(data) {
+    final String routeId = data['routeId'];
+    final String id = data['id'];
+    final DateTime? updatedAt = DateTime.tryParse(data['updatedAt'] ?? '');
+    final double? speed = data['speed']?.toDouble();
+    final String? revenueStatus = data['revenueStatus'];
+    final String? occupancyStatus = data['occupancyStatus'];
+    final double longitude = data['longitude']?.toDouble();
+    final double latitude = data['latitude']?.toDouble();
+    final String? label = data['label'];
+    final int? directionId = data['directionId'];
+    final int? currentStopSequence = data['currentStopSequence'];
+    final String? currentStatus = data['currentStatus'];
+    final List carriages = data['carriages'] ?? const [];
+    final int bearing = data['bearing'];
+    return Vehicle._internal(
+      routeId: routeId,
+      id: id,
+      updatedAt: updatedAt,
+      speed: speed,
+      revenueStatus: revenueStatus,
+      occupancyStatus: occupancyStatus,
+      longitude: longitude,
+      latitude: latitude,
+      label: label,
+      directionId: directionId,
+      currentStopSequence: currentStopSequence,
+      currentStatus: currentStatus,
+      carriages: carriages,
+      bearing: bearing,
+    );
+  }
+
+  const Vehicle._internal({
+    required this.routeId,
+    required this.id,
+    this.updatedAt,
+    this.speed,
+    this.revenueStatus,
+    this.occupancyStatus,
+    required this.longitude,
+    required this.latitude,
+    this.label,
+    this.directionId,
+    this.currentStopSequence,
+    this.currentStatus,
+    this.carriages = const [],
+    required this.bearing,
+  });
+}
+
 /// Decodes a polyline according to google's polyline encoding format.
 List<LatLng> decodePolyline(String source, {int? precision}) {
   int index = 0;
@@ -102,7 +169,7 @@ List<LatLng> decodePolyline(String source, {int? precision}) {
   List<LatLng> coordinates = [];
   int shift = 0;
   int result = 0;
-  int? byte;
+  late int? byte;
   late double latitudeChange;
   late double longitudeChange;
   num factor = pow(10, precision ?? 5);
