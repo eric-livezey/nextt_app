@@ -20,7 +20,7 @@ vector_math.Vector2 project(
   return a + ab * t;
 }
 
-/// Converts a latitute longitude pair to a point on the mercator projection.
+/// Converts a latitude longitude pair to a point on the mercator projection.
 ///
 /// https://en.wikipedia.org/wiki/Mercator_projection
 vector_math.Vector2 latLngToVector(LatLng latLng) {
@@ -33,7 +33,7 @@ vector_math.Vector2 latLngToVector(LatLng latLng) {
   return vector_math.Vector2(x, y);
 }
 
-/// Converts a point on the mercator projection to a latitute longitute pair
+/// Converts a point on the mercator projection to a latitude longitude pair
 ///
 /// https://en.wikipedia.org/wiki/Mercator_projection
 LatLng vectorToLatLng(vector_math.Vector2 vector) {
@@ -50,7 +50,7 @@ class LatLngDistance {
   final double distance;
 }
 
-/// Snaps a latitude longitute point the point on a polyline
+/// Snaps a latitude longitude point the point on a polyline
 LatLngDistance? snapToPolyline(LatLng point, Iterable<LatLng> points) {
   if (points.isEmpty) {
     return null;
