@@ -46,7 +46,7 @@ LatLng pointToLatLng(math.Point point) {
 
 /// Returns the closest point on the route represented by a group of shapes to a point.
 ///
-/// This is implemented by finding the shortest vector
+/// This is implemented by finding the shortest vector which results from projecting the point onto each line.
 math.Point? snapToRouteOfPoints(
   math.Point<double> point,
   Iterable<Iterable<math.Point<double>>> shapes,
