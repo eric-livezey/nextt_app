@@ -427,7 +427,6 @@ class _AnimatedMarkerMapBuilderState extends State<AnimatedMarkerMapBuilder>
             onAnimationCompleted: _handleAnimationCompleted,
           );
         } else if (marker != animation.marker) {
-          animation.marker = marker;
           animation.updateMarker(marker);
         }
       }
