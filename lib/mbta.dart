@@ -110,6 +110,8 @@ class Vehicle {
   final List carriages;
   final int bearing;
 
+  LatLng get position => LatLng(latitude, longitude);
+
   factory Vehicle.fromJson(data) {
     final String routeId = data['routeId'];
     final String id = data['id'];

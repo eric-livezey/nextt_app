@@ -1,80 +1,10 @@
 import 'dart:convert';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:nextt_app/animated_marker.dart';
 import 'package:nextt_app/mbta.dart' as mbta;
-import 'package:vector_math/vector_math.dart' as vector_math;
 import 'package:web_socket_channel/web_socket_channel.dart';
-
-/// Returns the projection of `q` onto the line between at `a` and `b`.
-///
-/// https://en.wikipedia.org/wiki/Vector_projection
-vector_math.Vector2 project(
-  vector_math.Vector2 q,
-  vector_math.Vector2 a,
-  vector_math.Vector2 b,
-) {
-  final ab = b - a;
-  final double t = ((q - a).dot(ab) / ab.dot(ab)).clamp(0, 1);
-  return a + ab * t;
-}
-
-/// Converts a latitude longitude pair to a point on the mercator projection.
-///
-/// https://en.wikipedia.org/wiki/Mercator_projection
-vector_math.Vector2 latLngToVector(LatLng latLng) {
-  // earth's radius
-  const double r = 6378137.0;
-  final longitude = latLng.longitude * math.pi / 180.0;
-  final latitude = latLng.latitude * math.pi / 180.0;
-  final x = r * longitude;
-  final y = r * math.log(math.tan(math.pi / 4 + latitude / 2));
-  return vector_math.Vector2(x, y);
-}
-
-/// Converts a point on the mercator projection to a latitude longitude pair
-///
-/// https://en.wikipedia.org/wiki/Mercator_projection
-LatLng vectorToLatLng(vector_math.Vector2 vector) {
-  // earth's radius
-  const double r = 6378137.0;
-  final longitude = vector.x / r;
-  final latitude = 2 * math.atan(math.exp(vector.y / r)) - math.pi / 2;
-  return LatLng(latitude * 180 / math.pi, longitude * 180 / math.pi);
-}
-
-class LatLngDistance {
-  const LatLngDistance(this.latLng, this.distance);
-  final LatLng latLng;
-  final double distance;
-}
-
-/// Snaps a latitude longitude point the point on a polyline
-LatLngDistance? snapToPolyline(LatLng point, Iterable<LatLng> points) {
-  if (points.isEmpty) {
-    return null;
-  }
-  final vector = latLngToVector(point);
-  double min = double.infinity;
-  late vector_math.Vector2 closest;
-  LatLng previous = points.first;
-
-  for (point in points.skip(1)) {
-    final a = latLngToVector(previous);
-    final b = latLngToVector(point);
-    final projection = project(vector, a, b);
-    final dist = (projection - vector).length;
-
-    if (dist < min) {
-      min = dist;
-      closest = projection;
-    }
-    previous = point;
-  }
-
-  return LatLngDistance(vectorToLatLng(closest), min);
-}
 
 class _MapShape {
   _MapShape(this.shape, this.polyline);
@@ -94,7 +24,7 @@ class _MapRoute {
 class _MapVehicle {
   _MapVehicle(this.vehicle, this.marker);
 
-  final mbta.Vehicle vehicle;
+  mbta.Vehicle vehicle;
   Marker marker;
 }
 
@@ -106,10 +36,8 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  _MapPageState();
-
-  WebSocketChannel? _channel;
-  GoogleMapController? controller;
+  late final WebSocketChannel _channel;
+  late GoogleMapController controller;
   final Map<String, _MapShape> _shapes = {};
   final Map<String, _MapRoute> _routes = {};
   final Map<String, _MapVehicle> _vehicles = {};
@@ -121,18 +49,18 @@ class _MapPageState extends State<MapPage> {
     // connect to the websocket
     // TODO: replace with real URI
     _channel = WebSocketChannel.connect(Uri.parse('ws://10.220.48.189:3000'));
-    _channel!.stream.listen(_onWebSocketData);
+    _channel.stream.listen(_onWebSocketData);
   }
 
   @override
   void dispose() {
     super.dispose();
     // close the websocket
-    _channel?.sink.close();
+    _channel.sink.close();
   }
 
   void _onMapCreated(GoogleMapController controller) {
-    this.controller = controller;
+    controller = controller;
   }
 
   void _onWebSocketData(event) {
@@ -169,7 +97,7 @@ class _MapPageState extends State<MapPage> {
 
   void _onRouteReset(List data) {
     for (final routeData in data) {
-      final mbta.Route route = mbta.Route.fromJson(routeData);
+      final route = mbta.Route.fromJson(routeData);
       if (_routes.containsKey(route.id)) {
         _removeRoute(route.id);
       }
@@ -178,12 +106,12 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _onRouteAdd(data) {
-    final mbta.Route route = mbta.Route.fromJson(data);
+    final route = mbta.Route.fromJson(data);
     _addRoute(route);
   }
 
   void _onRouteUpdate(data) {
-    final mbta.Route route = mbta.Route.fromJson(data);
+    final route = mbta.Route.fromJson(data);
     if (_routes.containsKey(route.id)) {
       _removeRoute(route.id);
     }
@@ -196,7 +124,7 @@ class _MapPageState extends State<MapPage> {
 
   void _onVehicleReset(List data) {
     for (final vehicleData in data) {
-      final mbta.Vehicle vehicle = mbta.Vehicle.fromJson(vehicleData);
+      final vehicle = mbta.Vehicle.fromJson(vehicleData);
       if (_vehicles.containsKey(vehicle.id)) {
         _removeVehicle(vehicle.id);
       }
@@ -205,34 +133,35 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _onVehicleAdd(data) {
-    final mbta.Vehicle vehicle = mbta.Vehicle.fromJson(data);
+    final vehicle = mbta.Vehicle.fromJson(data);
     _addVehicle(vehicle);
   }
 
   void _onVehicleUpdate(data) {
-    final mbta.Vehicle vehicle = mbta.Vehicle.fromJson(data);
-    if (_vehicles.containsKey(vehicle.id)) {
-      _removeVehicle(vehicle.id);
+    final vehicle = mbta.Vehicle.fromJson(data);
+    final mapVehicle = _vehicles[vehicle.id];
+    if (mapVehicle != null) {
+      mapVehicle.vehicle = vehicle;
+      _moveVehicle(mapVehicle, vehicle.position);
+    } else {
+      _addVehicle(vehicle);
     }
-    _addVehicle(vehicle);
   }
 
   void _onVehicleRemove(data) {
     _removeVehicle(data['id']);
   }
 
-  /// snaps a point to a route
-  LatLng _snapPoint(LatLng point, _MapRoute route) {
-    return route.shapes.fold(null as LatLngDistance?, (min, shape) {
-          final dist = snapToPolyline(point, shape.polyline.points);
-          return min == null || dist != null && dist.distance < min.distance
-              ? dist
-              : min;
-        })?.latLng ??
-        point;
+  /// Snaps a point to a route
+  LatLng _snapPoint(LatLng coords, _MapRoute route) {
+    return snapToRoute(
+          coords,
+          route.shapes.map((shape) => shape.polyline.points),
+        ) ??
+        coords;
   }
 
-  /// snaps all markers associated with the route
+  /// Snaps all markers associated with the route
   void _snapMarkers(String routeId) {
     setState(() {
       for (final mapVehicle in _vehicles.values) {
@@ -240,11 +169,33 @@ class _MapPageState extends State<MapPage> {
         if (mapVehicle.vehicle.routeId == routeId) {
           mapVehicle.marker = mapVehicle.marker.copyWith(
             positionParam: _snapPoint(
-              LatLng(vehicle.latitude, vehicle.longitude),
+              vehicle.position,
               _routes[vehicle.routeId]!,
             ),
           );
         }
+      }
+    });
+  }
+
+  void _moveVehicle(_MapVehicle vehicle, LatLng target) {
+    final marker = vehicle.marker;
+    setState(() {
+      if (marker is AnimatedMarker) {
+        vehicle.marker = marker.copyWith(
+          rotationParam: vehicle.vehicle.bearing.toDouble(),
+          targetParam: target,
+          durationParam: Durations.extralong4,
+        );
+      } else {
+        vehicle.marker = AnimatedMarker.from(
+          marker.copyWith(rotationParam: vehicle.vehicle.bearing.toDouble()),
+          target: target,
+          duration: Durations.extralong4,
+          route: _routes[vehicle.vehicle.routeId]?.shapes.map(
+            (shape) => shape.polyline.points,
+          ),
+        );
       }
     });
   }
@@ -254,14 +205,14 @@ class _MapPageState extends State<MapPage> {
     final marker = Marker(
       markerId: markerId,
       position: _snapPoint(
-        LatLng(vehicle.latitude, vehicle.longitude),
+        vehicle.position,
         _routes[vehicle.routeId]!,
       ),
       infoWindow: InfoWindow(title: vehicle.label),
       onTap: () => _onVehicleTapped(markerId),
       icon: await BitmapDescriptor.asset(
         ImageConfiguration(size: Size(20, 20)),
-        'assets/navigation.png',
+        "assets/navigation.png",
       ),
       anchor: Offset(0.5, 0.5),
       rotation: vehicle.bearing.toDouble(),
@@ -279,6 +230,13 @@ class _MapPageState extends State<MapPage> {
       setState(() {
         _vehicles.remove(vehicleId);
       });
+    }
+  }
+
+  _onMarkerChanged(AnimatedMarker marker) {
+    final vehicle = _vehicles[marker.markerId.value];
+    if (vehicle != null) {
+      vehicle.marker = marker;
     }
   }
 
@@ -360,14 +318,19 @@ class _MapPageState extends State<MapPage> {
         actions: [IconButton(onPressed: () {}, icon: Icon(Icons.menu))],
       ),
       body: SizedBox.expand(
-        child: GoogleMap(
-          initialCameraPosition: const CameraPosition(
-            target: LatLng(42.3555, -71.0565),
-            zoom: 12.0,
-          ),
-          polylines: Set.of(_shapes.values.map((e) => e.polyline)),
-          markers: Set.of(_vehicles.values.map((e) => e.marker)),
-          onMapCreated: _onMapCreated,
+        child: AnimatedMarkerMapBuilder(
+          builder:
+              (context, markers) => GoogleMap(
+                initialCameraPosition: const CameraPosition(
+                  target: LatLng(42.3555, -71.0565),
+                  zoom: 12.0,
+                ),
+                polylines: Set.of(_shapes.values.map((e) => e.polyline)),
+                markers: markers,
+                onMapCreated: _onMapCreated,
+              ),
+          markers: Set.of(_vehicles.values.map((vehicle) => vehicle.marker)),
+          onMarkerChanged: _onMarkerChanged,
         ),
       ),
     );
