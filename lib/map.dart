@@ -185,13 +185,13 @@ class _MapPageState extends State<MapPage> {
         vehicle.marker = marker.copyWith(
           rotationParam: vehicle.vehicle.bearing.toDouble(),
           targetParam: target,
-          durationParam: Durations.extralong4,
+          durationParam: Durations.medium2,
         );
       } else {
         vehicle.marker = AnimatedMarker.from(
           marker.copyWith(rotationParam: vehicle.vehicle.bearing.toDouble()),
           target: target,
-          duration: Durations.extralong4,
+          duration: Durations.medium2,
           route: _routes[vehicle.vehicle.routeId]?.shapes.map(
             (shape) => shape.polyline.points,
           ),

@@ -250,7 +250,9 @@ class _MarkerAnimation {
     required this.onMarkerChanged,
     required this.onAnimationCompleted,
   }) : outgoingPosition = marker.position,
-       incomingPosition = marker.target {
+       incomingPosition = marker.target,
+       initialDuration = controller.duration ?? defaultDuration,
+       duration = controller.duration ?? defaultDuration {
     controller.addListener(handleAnimation);
     controller.addStatusListener(handleAnimationCompleted);
     controller.forward(from: 0);
@@ -258,12 +260,13 @@ class _MarkerAnimation {
 
   static const Duration defaultDuration = Durations.medium2;
 
+  final Duration initialDuration;
   AnimatedMarker marker;
   final AnimationController controller;
   LatLng outgoingPosition;
   LatLng incomingPosition;
   List<LatLng> pendingPositions = [];
-  Duration duration = defaultDuration;
+  Duration duration;
   final void Function(AnimatedMarker) onMarkerChanged;
   final void Function(AnimatedMarker) onAnimationCompleted;
 
@@ -315,7 +318,7 @@ class _MarkerAnimation {
         controller.duration = duration;
         animateValueUpdate(incomingPosition, pendingPositions.removeAt(0));
       } else {
-        controller.duration = defaultDuration;
+        controller.duration = initialDuration;
         onAnimationCompleted(marker.copyWith(durationParam: Duration.zero));
       }
     }
