@@ -404,37 +404,42 @@ class _AnimatedMarkerMapBuilderState extends State<AnimatedMarkerMapBuilder>
   void didUpdateWidget(AnimatedMarkerMapBuilder oldWidget) {
     super.didUpdateWidget(oldWidget);
     final widgetMarkers = widget.markers;
-    // remove markers which are no longer present
-    _markers.removeWhere((markerId, marker) => !widgetMarkers.contains(marker));
-    // create or update new markers/animations
-    for (final marker in widgetMarkers) {
-      if (!_markers.containsKey(marker.markerId)) {
-        _markers[marker.markerId] =
-            marker is AnimatedMarker
-                ? marker
-                : AnimatedMarker.from(
-                  marker,
-                  target: marker.position,
-                  duration: Duration.zero,
-                );
-      }
-      if (marker is AnimatedMarker && marker.duration != Duration.zero) {
-        final animation = _animations[marker.markerId];
-        if (animation == null) {
-          _animations[marker.markerId] = _MarkerAnimation(
-            marker: marker,
-            controller: AnimationController(
-              duration: marker.duration,
-              vsync: this,
-            ),
-            onMarkerChanged: _handleMarkerChanged,
-            onAnimationCompleted: _handleAnimationCompleted,
-          );
-        } else if (marker != animation.marker) {
-          animation.updateMarker(marker);
+    setState(() {
+      // remove markers which are no longer present
+      _markers.removeWhere(
+        (markerId, marker) => !widgetMarkers.contains(marker),
+      );
+      // create or update new markers/animations
+      for (final marker in widgetMarkers) {
+        if (!_markers.containsKey(marker.markerId) ||
+            _markers[marker.markerId] != marker) {
+          _markers[marker.markerId] =
+              marker is AnimatedMarker
+                  ? marker
+                  : AnimatedMarker.from(
+                    marker,
+                    target: marker.position,
+                    duration: Duration.zero,
+                  );
+        }
+        if (marker is AnimatedMarker && marker.duration != Duration.zero) {
+          final animation = _animations[marker.markerId];
+          if (animation == null) {
+            _animations[marker.markerId] = _MarkerAnimation(
+              marker: marker,
+              controller: AnimationController(
+                duration: marker.duration,
+                vsync: this,
+              ),
+              onMarkerChanged: _handleMarkerChanged,
+              onAnimationCompleted: _handleAnimationCompleted,
+            );
+          } else if (marker != animation.marker) {
+            animation.updateMarker(marker);
+          }
         }
       }
-    }
+    });
   }
 
   _handleMarkerChanged(AnimatedMarker marker) {
