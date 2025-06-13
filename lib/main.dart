@@ -5,6 +5,8 @@ import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:nextt_app/map.dart';
 
+import 'package:nextt_app/pages/home.dart';
+
 void main() {
   final GoogleMapsFlutterPlatform mapsImplementation =
       GoogleMapsFlutterPlatform.instance;
@@ -108,11 +110,7 @@ class _HomePageState extends State<HomePage> {
       body:
           <Widget>[
             /// Home page
-            SizedBox.expand(
-              child: Center(
-                child: Text('Home page', style: theme.textTheme.titleLarge),
-              ),
-            ),
+            HomeScreen(),
 
             /// Map page
             MapPage(),
