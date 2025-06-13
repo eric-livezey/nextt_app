@@ -253,6 +253,7 @@ class _MarkerAnimation {
        incomingPosition = marker.target,
        initialDuration = controller.duration ?? defaultDuration,
        duration = controller.duration ?? defaultDuration {
+    controller.duration = initialDuration;
     controller.addListener(handleAnimation);
     controller.addStatusListener(handleAnimationCompleted);
     controller.forward(from: 0);
@@ -417,7 +418,7 @@ class _AnimatedMarkerMapBuilderState extends State<AnimatedMarkerMapBuilder>
                   duration: Duration.zero,
                 );
       }
-      if (marker is AnimatedMarker) {
+      if (marker is AnimatedMarker && marker.duration != Duration.zero) {
         final animation = _animations[marker.markerId];
         if (animation == null) {
           _animations[marker.markerId] = _MarkerAnimation(
