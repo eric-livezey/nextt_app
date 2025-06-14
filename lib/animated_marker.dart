@@ -54,14 +54,14 @@ math.Point? snapToRouteOfPoints(
   double min = double.infinity;
   math.Point<double>? closest;
 
-  // loop through non-empty points
+  // loop through non-empty shapes
   for (final shape in shapes.where((shape) => shape.isNotEmpty)) {
     math.Point<double> previous = shape.first;
 
-    // loop through shapes
-    for (final p in shape.skip(1)) {
+    // loop through vertices
+    for (final vertex in shape.skip(1)) {
       final a = previous;
-      final b = p;
+      final b = vertex;
       // get projection of the point onto the line between a and b
       final projection = project(point, a, b);
       // calculate distance
@@ -75,7 +75,7 @@ math.Point? snapToRouteOfPoints(
           return closest;
         }
       }
-      previous = p;
+      previous = vertex;
     }
   }
 
@@ -243,6 +243,9 @@ class AnimatedMarker extends Marker {
   }
 }
 
+final double _refreshRate =
+    WidgetsBinding.instance.platformDispatcher.views.first.display.refreshRate;
+
 class _MarkerAnimation {
   _MarkerAnimation({
     required this.marker,
@@ -260,7 +263,10 @@ class _MarkerAnimation {
   }
 
   static const Duration defaultDuration = Durations.medium2;
+  static const double fps = 30;
 
+  final int maxIt = (_refreshRate / fps).toInt();
+  int it = (_refreshRate / fps).toInt();
   final Duration initialDuration;
   AnimatedMarker marker;
   final AnimationController controller;
@@ -293,23 +299,29 @@ class _MarkerAnimation {
   }
 
   void handleAnimation() {
-    final value = controller.value;
-    final outgoing = latLngToPoint(outgoingPosition);
-    final incoming = latLngToPoint(incomingPosition);
-    final point = outgoing + (incoming - outgoing) * value;
-    final route = marker.route;
-    final position =
-        route != null
-            ? snapToRoute(pointToLatLng(point), route)
-            : pointToLatLng(point);
+    if (it == maxIt) {
+      final value = controller.value;
+      final outgoing = latLngToPoint(outgoingPosition);
+      final incoming = latLngToPoint(incomingPosition);
+      final point = outgoing + (incoming - outgoing) * value;
+      final route = marker.route;
+      final position =
+          route != null
+              ? snapToRoute(pointToLatLng(point), route)
+              : pointToLatLng(point);
 
-    marker = marker.copyWith(
-      positionParam: position,
-      targetParam: incomingPosition,
-      durationParam: duration * (1 - value),
-    );
+      marker = marker.copyWith(
+        positionParam: position,
+        targetParam: incomingPosition,
+        durationParam: duration * (1 - value),
+      );
 
-    onMarkerChanged(marker);
+      onMarkerChanged(marker);
+
+      it = 0;
+    } else {
+      it++;
+    }
   }
 
   void handleAnimationCompleted(AnimationStatus status) {
@@ -320,7 +332,12 @@ class _MarkerAnimation {
         animateValueUpdate(incomingPosition, pendingPositions.removeAt(0));
       } else {
         controller.duration = initialDuration;
-        onAnimationCompleted(marker.copyWith(durationParam: Duration.zero));
+        onAnimationCompleted(
+          marker.copyWith(
+            positionParam: marker.target,
+            durationParam: Duration.zero,
+          ),
+        );
       }
     }
   }
