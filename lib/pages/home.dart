@@ -11,6 +11,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Color lineColor = const Color.fromARGB(204, 0, 149, 0);
   String selectedLine = 'Green E';
   late List<TrainStop> currentStops;
 
@@ -26,10 +27,18 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedLine = value;
       if (value == 'Green E') {
         currentStops = greenEStops;
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
       } else if (value == 'Green B') {
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
         currentStops = greenBStops;
+      } else if (value == 'Red Ashmont') {
+        currentStops = redLineAshmontStops;
+        lineColor = const Color.fromARGB(204, 255, 0, 0);
+      } else if (value == 'Red Braintree') {
+        currentStops = redLineBraintreeStops;
+        lineColor = const Color.fromARGB(204, 255, 0, 0);
       }
-      // ADD MORE LINES LUCAS
+      // ADD MORE LINES AS BUILDING
     });
   }
 
@@ -47,7 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
               items: const [
                 DropdownMenuItem(value: 'Green E', child: Text('Green Line - E Branch')),
                 DropdownMenuItem(value: 'Green B', child: Text('Green Line - B Branch')),
-                
+                DropdownMenuItem(value: 'Red Ashmont', child: Text('Red Line - Ashmont Branch')),
+                DropdownMenuItem(value: 'Red Braintree', child: Text('Red Line - Braintree Branch')),
               ],
               onChanged: _onLineChanged,
             ),
@@ -78,8 +88,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                 minHeight: 300,
                               ),
                               child: AlertDialog(
-                                title: Text(trainstop.name),
-                                content: const Text('connect with backend to display real time info'),
+                                title: Center(
+                                  child: Text(
+                                    trainstop.name,
+                                    style: TextStyle(
+                                      fontSize: 20, 
+                                      fontWeight: FontWeight.bold,
+                                      
+                                      ),
+                                    ),
+                                  ),
+                                
+                                content: Column(
+                                  children: [
+                                    SizedBox(height: 16),
+                                    const Text('Next Trains:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                    const Text('Medford Tufts: 5 min'),
+                                    const Text('Heath Street: 3 min'),
+                                    SizedBox(height: 16),
+                                    const Text('Alerts:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    const Text('No current alerts'),
+                                  ],
+                                ),
+                                
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
@@ -99,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 60,
                             height: 60,
                             decoration: BoxDecoration(
-                              color: const Color.fromARGB(204, 0, 149, 0),
+                              color: lineColor,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.train, color: Colors.white),

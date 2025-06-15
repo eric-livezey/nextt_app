@@ -53,3 +53,45 @@ final List<TrainStop> greenEStops = [
   TrainStop('North Station'),
 ];
 
+// RED Ashmont stops
+final List<TrainStop> redLineAshmontStops = [
+  TrainStop('Alewife'),
+  TrainStop('Davis'),
+  TrainStop('Porter'),
+  TrainStop('Harvard'),
+  TrainStop('Central'),
+  TrainStop('Kendall/MIT'),
+  TrainStop('Charles/MGH'),
+  TrainStop('Park Street'),
+  TrainStop('Downtown Crossing'),
+  TrainStop('South Station'),
+  TrainStop('Broadway'),
+  TrainStop('Andrew'),
+  TrainStop('JFK/UMass'),
+  TrainStop('Savin Hill'),
+  TrainStop('Fields Corner'),
+  TrainStop('Shawmut'),
+  TrainStop('Ashmont'),
+];
+
+// RED Ashmont stops
+final List<TrainStop> redLineBraintreeStops = [
+  TrainStop('Alewife'),
+  TrainStop('Davis'),
+  TrainStop('Porter'),
+  TrainStop('Harvard'),
+  TrainStop('Central'),
+  TrainStop('Kendall/MIT'),
+  TrainStop('Charles/MGH'),
+  TrainStop('Park Street'),
+  TrainStop('Downtown Crossing'),
+  TrainStop('South Station'),
+  TrainStop('Broadway'),
+  TrainStop('Andrew'),
+  TrainStop('JFK/UMass'),
+  TrainStop('North Quincy'),
+  TrainStop('Wollaston'),
+  TrainStop('Quincy Center'),
+  TrainStop('Quincy Adams'),
+  TrainStop('Braintree'),
+];
