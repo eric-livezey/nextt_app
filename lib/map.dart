@@ -3,20 +3,20 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:nextt_app/animated_marker.dart';
-import 'package:nextt_app/mbta.dart' as mbta;
+import 'package:nextt_app/api.dart' as api;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class _MapShape {
   _MapShape(this.shape, this.polyline);
 
-  final mbta.Shape shape;
+  final api.Shape shape;
   Polyline polyline;
 }
 
 class _MapRoute {
   _MapRoute(this.route, this.shapes);
 
-  final mbta.Route route;
+  final api.Route route;
   final List<_MapShape> shapes;
   bool visible = true;
 }
@@ -24,7 +24,7 @@ class _MapRoute {
 class _MapVehicle {
   _MapVehicle(this.vehicle, this.marker);
 
-  mbta.Vehicle vehicle;
+  api.Vehicle vehicle;
   Marker marker;
 }
 
@@ -41,7 +41,6 @@ class _MapPageState extends State<MapPage> {
   final Map<String, _MapShape> _shapes = {};
   final Map<String, _MapRoute> _routes = {};
   final Map<String, _MapVehicle> _vehicles = {};
-  _MapRoute? _selectedRoute;
 
   @override
   void initState() {
@@ -97,7 +96,7 @@ class _MapPageState extends State<MapPage> {
 
   void _onRouteReset(List data) {
     for (final routeData in data) {
-      final route = mbta.Route.fromJson(routeData);
+      final route = api.Route.fromJson(routeData);
       if (_routes.containsKey(route.id)) {
         _removeRoute(route.id);
       }
@@ -106,12 +105,12 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _onRouteAdd(data) {
-    final route = mbta.Route.fromJson(data);
+    final route = api.Route.fromJson(data);
     _addRoute(route);
   }
 
   void _onRouteUpdate(data) {
-    final route = mbta.Route.fromJson(data);
+    final route = api.Route.fromJson(data);
     if (_routes.containsKey(route.id)) {
       _removeRoute(route.id);
     }
@@ -124,7 +123,7 @@ class _MapPageState extends State<MapPage> {
 
   void _onVehicleReset(List data) {
     for (final vehicleData in data) {
-      final vehicle = mbta.Vehicle.fromJson(vehicleData);
+      final vehicle = api.Vehicle.fromJson(vehicleData);
       if (_vehicles.containsKey(vehicle.id)) {
         _removeVehicle(vehicle.id);
       }
@@ -133,12 +132,12 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _onVehicleAdd(data) {
-    final vehicle = mbta.Vehicle.fromJson(data);
+    final vehicle = api.Vehicle.fromJson(data);
     _addVehicle(vehicle);
   }
 
   void _onVehicleUpdate(data) {
-    final vehicle = mbta.Vehicle.fromJson(data);
+    final vehicle = api.Vehicle.fromJson(data);
     final mapVehicle = _vehicles[vehicle.id];
     if (mapVehicle != null) {
       mapVehicle.vehicle = vehicle;
@@ -183,13 +182,13 @@ class _MapPageState extends State<MapPage> {
     setState(() {
       if (marker is AnimatedMarker) {
         vehicle.marker = marker.copyWith(
-          rotationParam: vehicle.vehicle.bearing.toDouble(),
+          rotationParam: vehicle.vehicle.bearing?.toDouble(),
           targetParam: target,
           durationParam: Durations.medium2,
         );
       } else {
         vehicle.marker = AnimatedMarker.from(
-          marker.copyWith(rotationParam: vehicle.vehicle.bearing.toDouble()),
+          marker.copyWith(rotationParam: vehicle.vehicle.bearing?.toDouble()),
           target: target,
           duration: Durations.medium2,
           route: _routes[vehicle.vehicle.routeId]?.shapes.map(
@@ -200,14 +199,11 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
-  Future<void> _addVehicle(mbta.Vehicle vehicle) async {
+  Future<void> _addVehicle(api.Vehicle vehicle) async {
     final markerId = MarkerId(vehicle.id);
     final marker = Marker(
       markerId: markerId,
-      position: _snapPoint(
-        vehicle.position,
-        _routes[vehicle.routeId]!,
-      ),
+      position: _snapPoint(vehicle.position, _routes[vehicle.routeId]!),
       infoWindow: InfoWindow(title: vehicle.label),
       onTap: () => _onVehicleTapped(markerId),
       icon: await BitmapDescriptor.asset(
@@ -215,7 +211,7 @@ class _MapPageState extends State<MapPage> {
         "assets/navigation.png",
       ),
       anchor: Offset(0.5, 0.5),
-      rotation: vehicle.bearing.toDouble(),
+      rotation: vehicle.bearing?.toDouble() ?? 0.0,
     );
 
     final _MapVehicle mapVehicle = _MapVehicle(vehicle, marker);
@@ -244,22 +240,18 @@ class _MapPageState extends State<MapPage> {
     // TODO
   }
 
-  void _addRoute(mbta.Route route) {
+  void _addRoute(api.Route route) {
     final List<_MapShape> mapShapes = [];
-    for (mbta.Shape shape in route.shapes) {
+    for (api.Shape shape in route.shapes) {
       final PolylineId polylineId = PolylineId(shape.id);
       mapShapes.add(
         _MapShape(
           shape,
           Polyline(
             polylineId: polylineId,
-            consumeTapEvents: true,
             color: route.color ?? Colors.black,
-            points: shape.points,
+            points: shape.polyline,
             width: 5,
-            onTap: () {
-              _onRouteTapped(polylineId);
-            },
           ),
         ),
       );
@@ -284,16 +276,7 @@ class _MapPageState extends State<MapPage> {
           }
         }
         _routes.remove(routeId);
-        if (_selectedRoute!.route.id == routeId) {
-          _selectedRoute = null;
-        }
       }
-    });
-  }
-
-  void _onRouteTapped(PolylineId polylineId) {
-    setState(() {
-      _selectedRoute = _routes[_shapes[polylineId.value]!.shape.routeId];
     });
   }
 
@@ -310,9 +293,6 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement selected route options
-    // final String? selectedId = _selectedRoute?.route.id;
-
     return Scaffold(
       appBar: AppBar(
         actions: [IconButton(onPressed: () {}, icon: Icon(Icons.menu))],
