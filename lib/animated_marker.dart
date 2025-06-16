@@ -1,23 +1,19 @@
-import 'dart:math' as math;
+import 'dart:math' show Point, atan, exp, log, pi, tan;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-/// Returns dot product of two points as if they were vectors.
-double dot(math.Point<double> a, math.Point<double> b) {
-  return a.x * b.x + a.y * b.y;
+extension PointVectorMath on Point<double> {
+  /// Take the dot product of [other] with `this`, as if both points were vectors.
+  double dot(Point<double> other) => x * other.x + y * other.y;
 }
 
 /// Returns the projection of `q` onto the line between at `a` and `b`.
 ///
 /// https://en.wikipedia.org/wiki/Vector_projection
-math.Point<double> project(
-  math.Point<double> q,
-  math.Point<double> a,
-  math.Point<double> b,
-) {
+Point<double> project(Point<double> q, Point<double> a, Point<double> b) {
   final ab = b - a;
-  final double t = (dot(q - a, ab) / dot(ab, ab)).clamp(0, 1);
+  final t = (ab.dot(q - a) / ab.dot(ab)).clamp(0, 1).toDouble();
   return a + ab * t;
 }
 
@@ -27,36 +23,36 @@ const double r = 6378137.0;
 /// Converts a latitude longitude pair to a point on the mercator projection.
 ///
 /// https://en.wikipedia.org/wiki/Mercator_projection
-math.Point<double> latLngToPoint(LatLng coords) {
-  final longitude = coords.longitude * math.pi / 180.0;
-  final latitude = coords.latitude * math.pi / 180.0;
+Point<double> latLngToPoint(LatLng coords) {
+  final longitude = coords.longitude * pi / 180.0;
+  final latitude = coords.latitude * pi / 180.0;
   final x = r * longitude;
-  final y = r * math.log(math.tan(math.pi / 4 + latitude / 2));
-  return math.Point(x, y);
+  final y = r * log(tan(pi / 4 + latitude / 2));
+  return Point(x, y);
 }
 
 /// Converts a point on the mercator projection to a latitude longitude pair
 ///
 /// https://en.wikipedia.org/wiki/Mercator_projection
-LatLng pointToLatLng(math.Point point) {
+LatLng pointToLatLng(Point point) {
   final longitude = point.x / r;
-  final latitude = 2 * math.atan(math.exp(point.y / r)) - math.pi / 2;
-  return LatLng(latitude * 180 / math.pi, longitude * 180 / math.pi);
+  final latitude = 2 * atan(exp(point.y / r)) - pi / 2;
+  return LatLng(latitude * 180 / pi, longitude * 180 / pi);
 }
 
 /// Returns the closest point on the route represented by a group of shapes to a point.
 ///
 /// This is implemented by finding the shortest vector which results from projecting the point onto each line.
-math.Point? snapToRouteOfPoints(
-  math.Point<double> point,
-  Iterable<Iterable<math.Point<double>>> shapes,
+Point? snapToRouteOfPoints(
+  Point<double> point,
+  Iterable<Iterable<Point<double>>> shapes,
 ) {
   double min = double.infinity;
-  math.Point<double>? closest;
+  Point<double>? closest;
 
   // loop through non-empty shapes
   for (final shape in shapes.where((shape) => shape.isNotEmpty)) {
-    math.Point<double> previous = shape.first;
+    Point<double> previous = shape.first;
 
     // loop through vertices
     for (final vertex in shape.skip(1)) {
@@ -65,7 +61,7 @@ math.Point? snapToRouteOfPoints(
       // get projection of the point onto the line between a and b
       final projection = project(point, a, b);
       // calculate distance
-      final dist = (projection - point).distanceTo(const math.Point(0, 0));
+      final dist = (projection - point).distanceTo(const Point(0, 0));
 
       if (dist < min) {
         min = dist;

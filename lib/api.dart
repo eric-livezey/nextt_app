@@ -1,4 +1,4 @@
-import 'dart:math' as math show pow;
+import 'dart:math' show pow;
 
 import 'package:flutter/material.dart' show Color;
 import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
@@ -54,6 +54,22 @@ enum OccupancyStatus {
 
 enum RouteType { lightRail, heavyRail, commuterRail, bus, ferry }
 
+enum LocationType {
+  /// A location where passengers board or disembark from a transit vehicle.
+  stop,
+
+  /// A physical structure or area that contains one or more stops.
+  station,
+
+  /// A location where passengers can enter or exit a station from the street. The stop entry must also specify a `parentStation` value referencing the stop ID of the parent station for the entrance.
+  stationEntranceOrExit,
+
+  /// A location within a station, not matching any other `locationType`, which can be used to link together pathways defined in pathways.txt.
+  genericNode,
+}
+
+enum WheelchairBoarding { noInformation, accessible, inaccessible }
+
 RevenueStatus _revenueStatusFromString(String value) {
   return switch (value) {
     'REVENUE' => RevenueStatus.revenue,
@@ -97,6 +113,25 @@ RouteType _routeTypeFromInt(int value) {
   };
 }
 
+LocationType _locationTypeFromInt(int value) {
+  return switch (value) {
+    0 => LocationType.stop,
+    1 => LocationType.station,
+    2 => LocationType.stationEntranceOrExit,
+    3 => LocationType.genericNode,
+    _ => throw AssertionError('$value is not a valid location type.'),
+  };
+}
+
+WheelchairBoarding _wheelchairBoardingFromInt(int value) {
+  return switch (value) {
+    0 => WheelchairBoarding.noInformation,
+    1 => WheelchairBoarding.accessible,
+    2 => WheelchairBoarding.inaccessible,
+    _ => throw AssertionError('$value is not a valid wheelchair boarding.'),
+  };
+}
+
 /// Parses a color from a 6 digit hex string.
 Color _parseColor(String source) {
   int value = int.parse(source, radix: 16);
@@ -115,7 +150,7 @@ List<LatLng> _decodePolyline(String source, {int? precision}) {
   late int? byte;
   late double latitudeChange;
   late double longitudeChange;
-  final double factor = math.pow(10, precision ?? 5).toDouble();
+  final double factor = pow(10, precision ?? 5).toDouble();
 
   while (index < source.length) {
     byte = null;
@@ -165,13 +200,12 @@ class CarriageDetails {
   factory CarriageDetails.fromJson(Object json) {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
     final OccupancyStatus? occupancyStatus =
-        jsonMap['occupancy_status'] != null
-            ? _occupancyStatusFromString(jsonMap['occupancy_status'] as String)
+        jsonMap['occupancyStatus'] != null
+            ? _occupancyStatusFromString(jsonMap['occupancyStatus'] as String)
             : null;
     return CarriageDetails(
       occupancyStatus: occupancyStatus,
-      occupancyPercentage:
-          (jsonMap['occupancy_percentage'] as num?)?.toDouble(),
+      occupancyPercentage: (jsonMap['occupancyPercentage'] as num?)?.toDouble(),
       label: jsonMap['label'] as String?,
     );
   }
@@ -185,7 +219,6 @@ class Vehicle {
     required this.updatedAt,
     required this.latitude,
     required this.longitude,
-    required this.bearing,
     this.speed,
     this.revenueStatus,
     this.occupancyStatus,
@@ -194,6 +227,7 @@ class Vehicle {
     this.currentStopSequence,
     this.currentStatus,
     this.carriages,
+    this.bearing,
   });
 
   final String id;
@@ -216,16 +250,16 @@ class Vehicle {
   factory Vehicle.fromJson(Object json) {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
     final RevenueStatus? revenueStatus =
-        jsonMap['revenue_status'] != null
-            ? _revenueStatusFromString(jsonMap['revenue_status'] as String)
+        jsonMap['revenueStatus'] != null
+            ? _revenueStatusFromString(jsonMap['revenueStatus'] as String)
             : null;
     final OccupancyStatus? occupancyStatus =
-        jsonMap['occupancy_status'] != null
-            ? _occupancyStatusFromString(jsonMap['occupancy_status'] as String)
+        jsonMap['occupancyStatus'] != null
+            ? _occupancyStatusFromString(jsonMap['occupancyStatus'] as String)
             : null;
     final VehicleStopStatus? currentStatus =
-        jsonMap['current_status'] != null
-            ? _vehicleStatusFromString(jsonMap['current_status'] as String)
+        jsonMap['currentStatus'] != null
+            ? _vehicleStatusFromString(jsonMap['currentStatus'] as String)
             : null;
     final List<CarriageDetails>? carriages =
         (jsonMap['carriages'] as List?)
@@ -233,19 +267,19 @@ class Vehicle {
             .toList();
     return Vehicle(
       id: jsonMap['id'] as String,
-      routeId: jsonMap['route_id'] as String,
-      updatedAt: DateTime.parse((jsonMap['updated_at'] as String)),
+      routeId: jsonMap['routeId'] as String,
+      updatedAt: DateTime.parse((jsonMap['updatedAt'] as String)),
       latitude: (jsonMap['latitude'] as num).toDouble(),
       longitude: (jsonMap['longitude'] as num).toDouble(),
-      bearing: (jsonMap['bearing'] as num?)?.toDouble(),
       speed: (jsonMap['speed'] as num?)?.toDouble(),
       revenueStatus: revenueStatus,
       occupancyStatus: occupancyStatus,
       label: jsonMap['label'] as String?,
-      directionId: jsonMap['direction_id'] as int?,
-      currentStopSequence: jsonMap['current_stop_sequence'] as int?,
+      directionId: jsonMap['directionId'] as int?,
+      currentStopSequence: jsonMap['currentStopSequence'] as int?,
       currentStatus: currentStatus,
       carriages: carriages,
+      bearing: (jsonMap['bearing'] as num?)?.toDouble(),
     );
   }
 }
@@ -268,8 +302,8 @@ class Shape {
 class Route {
   const Route({
     required this.id,
-    required this.type,
     required this.shapes,
+    required this.type,
     this.textColor,
     this.sortOrder,
     this.shortName,
@@ -282,8 +316,8 @@ class Route {
   });
 
   final String id;
-  final RouteType type;
   final List<Shape> shapes;
+  final RouteType type;
   final Color? textColor;
   final int? sortOrder;
   final String? shortName;
@@ -304,23 +338,103 @@ class Route {
         jsonMap['textColor'] != null
             ? _parseColor(jsonMap['textColor'] as String)
             : null;
+    final List<String>? directionNames =
+        (jsonMap['directionNames'] as List?)
+            ?.map((json) => json as String)
+            .toList();
+    final List<String>? directionDestinations =
+        (jsonMap['directionDestinations'] as List?)
+            ?.map((json) => json as String)
+            .toList();
     final Color? color =
         jsonMap['color'] != null
             ? _parseColor(jsonMap['color'] as String)
             : null;
     return Route(
       id: jsonMap['id'] as String,
-      type: _routeTypeFromInt(jsonMap['type'] as int),
       shapes: shapes,
+      type: _routeTypeFromInt(jsonMap['type'] as int),
       textColor: textColor,
-      sortOrder: jsonMap['sort_order'] as int?,
-      shortName: jsonMap['short_name'] as String?,
-      longName: jsonMap['long_name'] as String?,
-      fareClass: jsonMap['fare_class'] as String?,
-      directionNames: (jsonMap['direction_names'] as List?)?.map((json) => json as String).toList(),
-      directionDestinations: (jsonMap['direction_destinations'] as List?)?.map((json) => json as String).toList(),
+      sortOrder: jsonMap['sortOrder'] as int?,
+      shortName: jsonMap['shortName'] as String?,
+      longName: jsonMap['longName'] as String?,
+      fareClass: jsonMap['fareClass'] as String?,
+      directionNames: directionNames,
+      directionDestinations: directionDestinations,
       description: jsonMap['description'] as String?,
       color: color,
+    );
+  }
+}
+
+class Stop {
+  const Stop({
+    required this.id,
+    required this.routeIds,
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    this.wheelchairBoarding,
+    this.vehicleType,
+    this.platformName,
+    this.platformCode,
+    this.onStreet,
+    this.municipality,
+    this.locationType,
+    this.description,
+    this.atStreet,
+    this.address,
+  });
+
+  final String id;
+  final List<String> routeIds;
+  final String name;
+  final double latitude;
+  final double longitude;
+  final WheelchairBoarding? wheelchairBoarding;
+  final RouteType? vehicleType;
+  final String? platformName;
+  final String? platformCode;
+  final String? onStreet;
+  final String? municipality;
+  final LocationType? locationType;
+  final String? description;
+  final String? atStreet;
+  final String? address;
+  LatLng get position => LatLng(latitude, longitude);
+
+  factory Stop.fromJson(Object json) {
+    final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    final List<String> routeIds =
+        (jsonMap['routeIds'] as List).map((json) => json as String).toList();
+    final WheelchairBoarding? wheelchairBoarding =
+        jsonMap['wheelchairBoarding'] != null
+            ? _wheelchairBoardingFromInt(jsonMap['type'] as int)
+            : null;
+    final RouteType? vehicleType =
+        jsonMap['vehicleType'] != null
+            ? _routeTypeFromInt(jsonMap['type'] as int)
+            : null;
+    final LocationType? locationType =
+        jsonMap['locationType'] != null
+            ? _locationTypeFromInt(jsonMap['type'] as int)
+            : null;
+    return Stop(
+      id: jsonMap['id'] as String,
+      routeIds: routeIds,
+      name: jsonMap['name'] as String,
+      latitude: (jsonMap['latitude'] as num).toDouble(),
+      longitude: (jsonMap['longitude'] as num).toDouble(),
+      wheelchairBoarding: wheelchairBoarding,
+      vehicleType: vehicleType,
+      platformName: jsonMap['platformName'] as String?,
+      platformCode: jsonMap['platformCode'] as String?,
+      onStreet: jsonMap['onStreet'] as String?,
+      municipality: jsonMap['municipality'] as String?,
+      locationType: locationType,
+      description: jsonMap['description'] as String?,
+      atStreet: jsonMap['atStreet'] as String?,
+      address: jsonMap['address'] as String?,
     );
   }
 }

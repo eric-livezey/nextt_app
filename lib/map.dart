@@ -1,10 +1,11 @@
-import 'dart:convert';
+import 'dart:convert' show jsonDecode;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:nextt_app/animated_marker.dart';
 import 'package:nextt_app/api.dart' as api;
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/web_socket_channel.dart'
+    show WebSocketChannel;
 
 class _MapShape {
   _MapShape(this.shape, this.polyline);
