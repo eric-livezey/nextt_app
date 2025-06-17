@@ -253,8 +253,8 @@ class _MarkerAnimation {
        initialDuration = controller.duration ?? defaultDuration,
        duration = controller.duration ?? defaultDuration {
     controller.duration = initialDuration;
-    controller.addListener(handleAnimation);
-    controller.addStatusListener(handleAnimationCompleted);
+    controller.addListener(_onAnimation);
+    controller.addStatusListener(_onAnimationStatus);
     controller.forward(from: 0);
   }
 
@@ -277,7 +277,7 @@ class _MarkerAnimation {
     controller.dispose();
   }
 
-  void updateMarker(AnimatedMarker newMarker) {
+  void _updateMarker(AnimatedMarker newMarker) {
     final oldMarker = marker;
     marker = newMarker;
     if (newMarker != oldMarker) {
@@ -289,12 +289,12 @@ class _MarkerAnimation {
             (1 / (percentRemaining + pendingPositions.length));
         controller.animateTo(1.0, duration: duration * percentRemaining);
       } else {
-        animateValueUpdate(incomingPosition, newMarker.target);
+        _animateValueUpdate(incomingPosition, newMarker.target);
       }
     }
   }
 
-  void handleAnimation() {
+  void _onAnimation() {
     if (it == maxIt) {
       final value = controller.value;
       final outgoing = latLngToPoint(outgoingPosition);
@@ -320,12 +320,12 @@ class _MarkerAnimation {
     }
   }
 
-  void handleAnimationCompleted(AnimationStatus status) {
+  void _onAnimationStatus(AnimationStatus status) {
     if (status.isCompleted) {
       outgoingPosition = incomingPosition;
       if (pendingPositions.isNotEmpty) {
         controller.duration = duration;
-        animateValueUpdate(incomingPosition, pendingPositions.removeAt(0));
+        _animateValueUpdate(incomingPosition, pendingPositions.removeAt(0));
       } else {
         controller.duration = initialDuration;
         onAnimationCompleted(
@@ -338,7 +338,7 @@ class _MarkerAnimation {
     }
   }
 
-  void animateValueUpdate(LatLng outgoing, LatLng incoming) {
+  void _animateValueUpdate(LatLng outgoing, LatLng incoming) {
     outgoingPosition = outgoing;
     incomingPosition = incoming;
     controller.forward(from: 0);
@@ -397,8 +397,8 @@ class _AnimatedMarkerMapBuilderState extends State<AnimatedMarkerMapBuilder>
                   duration: marker.duration,
                   vsync: this,
                 ),
-                onMarkerChanged: _handleMarkerChanged,
-                onAnimationCompleted: _handleAnimationCompleted,
+                onMarkerChanged: _onMarkerChanged,
+                onAnimationCompleted: _onAnimationCompleted,
               ),
             ),
           ),
@@ -444,25 +444,25 @@ class _AnimatedMarkerMapBuilderState extends State<AnimatedMarkerMapBuilder>
                 duration: marker.duration,
                 vsync: this,
               ),
-              onMarkerChanged: _handleMarkerChanged,
-              onAnimationCompleted: _handleAnimationCompleted,
+              onMarkerChanged: _onMarkerChanged,
+              onAnimationCompleted: _onAnimationCompleted,
             );
           } else if (marker != animation.marker) {
-            animation.updateMarker(marker);
+            animation._updateMarker(marker);
           }
         }
       }
     });
   }
 
-  _handleMarkerChanged(AnimatedMarker marker) {
+  void _onMarkerChanged(AnimatedMarker marker) {
     setState(() {
       _markers[marker.markerId] = marker;
       widget.onMarkerChanged?.call(marker);
     });
   }
 
-  void _handleAnimationCompleted(AnimatedMarker marker) {
+  void _onAnimationCompleted(AnimatedMarker marker) {
     _animations.remove(marker.markerId)?.dispose();
   }
 
