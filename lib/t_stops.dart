@@ -31,6 +31,59 @@ final List<TrainStop> greenBStops = [
   TrainStop('Government Center'),
 ];
 
+// GREEN C Line Stops
+final List<TrainStop> greenCStops = [
+  TrainStop('Cleveland Circle'),
+  TrainStop('Englewood Avenue'),
+  TrainStop('Dean Road'),
+  TrainStop('Tappan Street'),
+  TrainStop('Washington Square'),
+  TrainStop('Fairbanks Street'),
+  TrainStop('Summit Avenue'),
+  TrainStop('Coolidge Corner'),
+  TrainStop('Saint Paul Street'),
+  TrainStop('Kent Street'),
+  TrainStop('Hawes Street'),
+  TrainStop('Saint Mary’s Street'),
+  TrainStop('Kenmore'),
+  TrainStop('Hynes Convention Center'),
+  TrainStop('Copley'),
+  TrainStop('Arlington'),
+  TrainStop('Boylston'),
+  TrainStop('Park Street'),
+  TrainStop('Government Center'),
+];
+
+// GREEN D Line Stops
+final List<TrainStop> greenDStops = [
+  TrainStop('Riverside'),
+  TrainStop('Woodland'),
+  TrainStop('Waban'),
+  TrainStop('Eliot'),
+  TrainStop('Newton Highlands'),
+  TrainStop('Newton Centre'),
+  TrainStop('Chestnut Hill'),
+  TrainStop('Reservoir'),
+  TrainStop('Beaconsfield'),
+  TrainStop('Brookline Hills'),
+  TrainStop('Brookline Village'),
+  TrainStop('Longwood'),
+  TrainStop('Fenway'),
+  TrainStop('Kenmore'),
+  TrainStop('Hynes Convention Center'),
+  TrainStop('Copley'),
+  TrainStop('Arlington'),
+  TrainStop('Boylston'),
+  TrainStop('Park Street'),
+  TrainStop('Government Center'),
+  TrainStop('Haymarket'),
+  TrainStop('North Station'),
+  TrainStop('Science Park/West End'),
+  TrainStop('Lechmere'),
+  TrainStop('Union Square'),
+];
+
+
 // GREEN E Line stops
 final List<TrainStop> greenEStops = [
   TrainStop('Heath Street'),
@@ -52,6 +105,48 @@ final List<TrainStop> greenEStops = [
   TrainStop('Haymarket'),
   TrainStop('North Station'),
 ];
+
+// Orange Line Stops
+final List<TrainStop> orangeStops = [
+  TrainStop('Oak Grove'),
+  TrainStop('Malden Center'),
+  TrainStop('Wellington'),
+  TrainStop('Assembly'),
+  TrainStop('Sullivan Square'),
+  TrainStop('Community College'),
+  TrainStop('North Station'),
+  TrainStop('Haymarket'),
+  TrainStop('State Street'),
+  TrainStop('Downtown Crossing'),
+  TrainStop('Chinatown'),
+  TrainStop('Tufts Medical Center'),
+  TrainStop('Back Bay'),
+  TrainStop('Massachusetts Avenue'),
+  TrainStop('Ruggles'),
+  TrainStop('Roxbury Crossing'),
+  TrainStop('Jackson Square'),
+  TrainStop('Stony Brook'),
+  TrainStop('Green Street'),
+  TrainStop('Forest Hills'),
+];
+
+
+// Blue Line Stops
+final List<TrainStop> blueStops = [
+  TrainStop('Bowdoin'),
+  TrainStop('Government Center'),
+  TrainStop('State'),
+  TrainStop('Aquarium'),
+  TrainStop('Maverick'),
+  TrainStop('Airport'),
+  TrainStop('Wood Island'),
+  TrainStop('Orient Heights'),
+  TrainStop('Suffolk Downs'),
+  TrainStop('Beachmont'),
+  TrainStop('Revere Beach'),
+  TrainStop('Wonderland'),
+];
+
 
 // RED Ashmont stops
 final List<TrainStop> redLineAshmontStops = [
@@ -95,5 +190,3 @@ final List<TrainStop> redLineBraintreeStops = [
   TrainStop('Quincy Adams'),
   TrainStop('Braintree'),
 ];
-
-// comments

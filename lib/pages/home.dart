@@ -31,6 +31,18 @@ class _HomeScreenState extends State<HomeScreen> {
       } else if (value == 'Green B') {
         lineColor = const Color.fromARGB(204, 0, 149, 0);
         currentStops = greenBStops;
+      } else if (value == 'Green C') {
+        currentStops = greenCStops;
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
+      } else if (value == 'Green D') {
+        currentStops = greenDStops;
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
+      } else if (value == 'Orange') {
+        currentStops = orangeStops;
+        lineColor = const Color.fromARGB(204, 255, 153, 0);
+      } else if (value == 'Blue') {
+        currentStops = blueStops;
+        lineColor = const Color.fromARGB(204, 0, 0, 255);
       } else if (value == 'Red Ashmont') {
         currentStops = redLineAshmontStops;
         lineColor = const Color.fromARGB(204, 255, 0, 0);
@@ -38,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
         currentStops = redLineBraintreeStops;
         lineColor = const Color.fromARGB(204, 255, 0, 0);
       }
-      // ADD MORE LINES AS BUILDING
     });
   }
 
@@ -54,10 +65,14 @@ class _HomeScreenState extends State<HomeScreen> {
             DropdownButton<String>(
               value: selectedLine,
               items: const [
-                DropdownMenuItem(value: 'Green E', child: Text('Green Line - E Branch')),
-                DropdownMenuItem(value: 'Green B', child: Text('Green Line - B Branch')),
                 DropdownMenuItem(value: 'Red Ashmont', child: Text('Red Line - Ashmont Branch')),
                 DropdownMenuItem(value: 'Red Braintree', child: Text('Red Line - Braintree Branch')),
+                DropdownMenuItem(value: 'Orange', child: Text('Orange Line')),
+                DropdownMenuItem(value: 'Blue', child: Text('Blue Line')),
+                DropdownMenuItem(value: 'Green B', child: Text('Green Line - B Branch')),
+                DropdownMenuItem(value: 'Green C', child: Text('Green Line - C Branch')),
+                DropdownMenuItem(value: 'Green D', child: Text('Green Line - D Branch')),
+                DropdownMenuItem(value: 'Green E', child: Text('Green Line - E Branch')),
               ],
               onChanged: _onLineChanged,
             ),
@@ -102,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 content: Column(
                                   children: [
                                     SizedBox(height: 16),
+                                    // API BACK END CONNECTION BELONGS HERE
                                     const Text('Next Trains:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                     const Text('Medford Tufts: 5 min'),
                                     const Text('Heath Street: 3 min'),
