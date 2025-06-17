@@ -1,10 +1,11 @@
-import 'dart:convert';
+import 'dart:convert' show jsonDecode;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:nextt_app/animated_marker.dart';
 import 'package:nextt_app/api.dart' as api;
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/web_socket_channel.dart'
+    show WebSocketChannel;
 
 class _MapShape {
   _MapShape(this.shape, this.polyline);
@@ -35,8 +36,8 @@ class MapPage extends StatefulWidget {
   State<StatefulWidget> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
-  late final WebSocketChannel _channel;
+class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
+  WebSocketChannel? _channel;
   late GoogleMapController controller;
   final Map<String, _MapShape> _shapes = {};
   final Map<String, _MapRoute> _routes = {};
@@ -45,27 +46,53 @@ class _MapPageState extends State<MapPage> {
   @override
   void initState() {
     super.initState();
-    // connect to the websocket
-    // TODO: replace with real URI
-    _channel = WebSocketChannel.connect(Uri.parse('ws://10.220.48.189:3000'));
-    _channel.stream.listen(_onWebSocketData);
+    _connectWebsocket();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _closeWebsocket();
     super.dispose();
-    // close the websocket
-    _channel.sink.close();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _closeWebsocket();
+    }
+    if (state == AppLifecycleState.resumed) {
+      if (_channel == null) {
+        _connectWebsocket();
+      }
+    }
   }
 
   void _onMapCreated(GoogleMapController controller) {
     controller = controller;
   }
 
-  void _onWebSocketData(event) {
-    final payload = jsonDecode(event);
-    final String type = payload['type'];
-    final data = payload['data'];
+  /// Opens a new websocket channel.
+  void _connectWebsocket() {
+    // TODO: replace with real URI
+    _channel = WebSocketChannel.connect(Uri.parse('ws://10.220.48.189:3000'));
+    _channel!.stream.listen(_onWebSocketData, onDone: _onWebsocketDone);
+  }
+
+  void _closeWebsocket() {
+    _channel?.sink.close(0);
+  }
+
+  void _onWebsocketDone() {
+    _channel = null;
+  }
+
+  void _onWebSocketData(payload) {
+    final Map<String, dynamic> jsonMap =
+        jsonDecode(payload as String) as Map<String, dynamic>;
+    final String type = jsonMap['type'] as String;
+    final Object data = jsonMap['data'] as Object;
     switch (type) {
       case 'ROUTE_RESET':
         _onRouteReset(data);
@@ -94,9 +121,10 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  void _onRouteReset(List data) {
-    for (final routeData in data) {
-      final route = api.Route.fromJson(routeData);
+  void _onRouteReset(Object json) {
+    List jsonList = json as List;
+    for (final Object json in jsonList) {
+      final route = api.Route.fromJson(json);
       if (_routes.containsKey(route.id)) {
         _removeRoute(route.id);
       }
@@ -104,26 +132,28 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  void _onRouteAdd(data) {
-    final route = api.Route.fromJson(data);
+  void _onRouteAdd(Object json) {
+    final route = api.Route.fromJson(json);
     _addRoute(route);
   }
 
-  void _onRouteUpdate(data) {
-    final route = api.Route.fromJson(data);
+  void _onRouteUpdate(Object json) {
+    final route = api.Route.fromJson(json);
     if (_routes.containsKey(route.id)) {
       _removeRoute(route.id);
     }
     _addRoute(route);
   }
 
-  void _onRouteRemove(data) {
-    _removeRoute(data['id']);
+  void _onRouteRemove(Object json) {
+    Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    _removeRoute(jsonMap['id']);
   }
 
-  void _onVehicleReset(List data) {
-    for (final vehicleData in data) {
-      final vehicle = api.Vehicle.fromJson(vehicleData);
+  void _onVehicleReset(Object json) {
+    List jsonList = json as List;
+    for (final Object json in jsonList) {
+      final vehicle = api.Vehicle.fromJson(json);
       if (_vehicles.containsKey(vehicle.id)) {
         _removeVehicle(vehicle.id);
       }
@@ -131,13 +161,13 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  void _onVehicleAdd(data) {
-    final vehicle = api.Vehicle.fromJson(data);
+  void _onVehicleAdd(Object json) {
+    final vehicle = api.Vehicle.fromJson(json);
     _addVehicle(vehicle);
   }
 
-  void _onVehicleUpdate(data) {
-    final vehicle = api.Vehicle.fromJson(data);
+  void _onVehicleUpdate(Object json) {
+    final vehicle = api.Vehicle.fromJson(json);
     final mapVehicle = _vehicles[vehicle.id];
     if (mapVehicle != null) {
       mapVehicle.vehicle = vehicle;
@@ -147,8 +177,9 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  void _onVehicleRemove(data) {
-    _removeVehicle(data['id']);
+  void _onVehicleRemove(Object json) {
+    Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    _removeVehicle(jsonMap['id'] as String);
   }
 
   /// Snaps a point to a route
