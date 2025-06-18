@@ -1,4 +1,4 @@
-import 'dart:convert' show jsonDecode;
+import 'dart:convert' show jsonDecode, jsonEncode;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -78,6 +78,10 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     // TODO: replace with real URI
     _channel = WebSocketChannel.connect(Uri.parse('ws://10.220.48.189:3000'));
     _channel!.stream.listen(_onWebSocketData, onDone: _onWebsocketDone);
+    // Send initial filter
+    _channel!.sink.add(
+      jsonEncode(api.ResourceFilter(types: {'route', 'vehicle'})),
+    );
   }
 
   void _closeWebsocket() {

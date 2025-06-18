@@ -204,7 +204,7 @@ class AnimatedMarker extends Marker {
 
   @override
   Object toJson() {
-    final json = super.toJson() as Map<String, Object>;
+    final Map<String, Object> json = super.toJson() as Map<String, Object>;
 
     void addIfPresent(String fieldName, Object? value) {
       if (value != null) {

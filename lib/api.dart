@@ -438,3 +438,26 @@ class Stop {
     );
   }
 }
+
+class ResourceFilter {
+  const ResourceFilter({required this.types, this.routeIds, this.routeTypes});
+
+  final Set<String> types;
+  final Set<String>? routeIds;
+  final Set<RouteType>? routeTypes;
+
+  Object toJson() {
+    final Map<String, Object> json = <String, Object>{};
+
+    void addIfPresent(String fieldName, Object? value) {
+      if (value != null) {
+        json[fieldName] = value;
+      }
+    }
+
+    addIfPresent('types', types.toList());
+    addIfPresent('routeIds', routeIds?.toList());
+    addIfPresent('routeTypes', routeTypes?.toList());
+    return json;
+  }
+}
