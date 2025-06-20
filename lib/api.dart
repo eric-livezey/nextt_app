@@ -8,7 +8,16 @@ enum RevenueStatus {
   revenue,
 
   /// Indicates that the associated trip is not accepting passengers.
-  nonRevenue,
+  nonRevenue;
+
+  factory RevenueStatus.fromJson(Object json) {
+    String value = json as String;
+    return switch (value) {
+      'REVENUE' => revenue,
+      'NON_REVENUE' => nonRevenue,
+      _ => throw AssertionError('$value is not a valid revenue status.'),
+    };
+  }
 }
 
 enum VehicleStopStatus {
@@ -19,7 +28,17 @@ enum VehicleStopStatus {
   stoppedAt,
 
   /// The vehicle has departed the previous stop and is in transit.
-  inTransitTo,
+  inTransitTo;
+
+  factory VehicleStopStatus.fromJson(Object json) {
+    String value = json as String;
+    return switch (value) {
+      'INCOMING_AT' => incomingAt,
+      'STOPPED_AT' => stoppedAt,
+      'IN_TRANSIT_TO' => inTransitTo,
+      _ => throw AssertionError('$value is not a valid vehicle stop status.'),
+    };
+  }
 }
 
 /// The state of passenger occupancy for the vehicle or carriage.
@@ -49,10 +68,44 @@ enum OccupancyStatus {
   noDataAvailable,
 
   /// The vehicle or carriage is not boardable and never accepts passengers. Useful for special vehicles or carriages (engine, maintenance carriage, etc…).
-  notBoardable,
+  notBoardable;
+
+  factory OccupancyStatus.fromJson(Object json) {
+    String value = json as String;
+    return switch (value) {
+      'EMPTY' => empty,
+      'MANY_SEATS_AVAILABLE' => manySeatsAvailable,
+      'FEW_SEATS_AVAILABLE' => fewSeatsAvailable,
+      'STANDING_ROOM_ONLY' => standingRoomOnly,
+      'CRUSHED_STANDING_ROOM_ONLY' => crushedStandingRoomOnly,
+      'FULL' => full,
+      'NOT_ACCEPTING_PASSENGERS' => notAcceptingPassengers,
+      'NO_DATA_AVAILABLE' => noDataAvailable,
+      'NOT_BOARDABLE' => notBoardable,
+      _ => throw AssertionError('$value is not a valid occupancy status.'),
+    };
+  }
 }
 
-enum RouteType { lightRail, heavyRail, commuterRail, bus, ferry }
+enum RouteType {
+  lightRail,
+  heavyRail,
+  commuterRail,
+  bus,
+  ferry;
+
+  factory RouteType.fromJson(Object json) {
+    int value = json as int;
+    return switch (value) {
+      0 => lightRail,
+      1 => heavyRail,
+      2 => commuterRail,
+      3 => bus,
+      4 => ferry,
+      _ => throw AssertionError('$value is not a valid route type.'),
+    };
+  }
+}
 
 enum LocationType {
   /// A location where passengers board or disembark from a transit vehicle.
@@ -65,71 +118,34 @@ enum LocationType {
   stationEntranceOrExit,
 
   /// A location within a station, not matching any other `locationType`, which can be used to link together pathways defined in pathways.txt.
-  genericNode,
+  genericNode;
+
+  factory LocationType.fromJson(Object json) {
+    int value = json as int;
+    return switch (value) {
+      0 => stop,
+      1 => station,
+      2 => stationEntranceOrExit,
+      3 => genericNode,
+      _ => throw AssertionError('$value is not a valid location type.'),
+    };
+  }
 }
 
-enum WheelchairBoarding { noInformation, accessible, inaccessible }
+enum WheelchairBoarding {
+  noInformation,
+  accessible,
+  inaccessible;
 
-RevenueStatus _revenueStatusFromString(String value) {
-  return switch (value) {
-    'REVENUE' => RevenueStatus.revenue,
-    'NON_REVENUE' => RevenueStatus.nonRevenue,
-    _ => throw AssertionError('$value is not a valid revenue status.'),
-  };
-}
-
-VehicleStopStatus _vehicleStatusFromString(String value) {
-  return switch (value) {
-    'INCOMING_AT' => VehicleStopStatus.incomingAt,
-    'STOPPED_AT' => VehicleStopStatus.stoppedAt,
-    'IN_TRANSIT_TO' => VehicleStopStatus.inTransitTo,
-    _ => throw AssertionError('$value is not a valid vehicle status.'),
-  };
-}
-
-OccupancyStatus _occupancyStatusFromString(String value) {
-  return switch (value) {
-    'EMPTY' => OccupancyStatus.empty,
-    'MANY_SEATS_AVAILABLE' => OccupancyStatus.manySeatsAvailable,
-    'FEW_SEATS_AVAILABLE' => OccupancyStatus.fewSeatsAvailable,
-    'STANDING_ROOM_ONLY' => OccupancyStatus.standingRoomOnly,
-    'CRUSHED_STANDING_ROOM_ONLY' => OccupancyStatus.crushedStandingRoomOnly,
-    'FULL' => OccupancyStatus.full,
-    'NOT_ACCEPTING_PASSENGERS' => OccupancyStatus.notAcceptingPassengers,
-    'NO_DATA_AVAILABLE' => OccupancyStatus.noDataAvailable,
-    'NOT_BOARDABLE' => OccupancyStatus.notBoardable,
-    _ => throw AssertionError('$value is not a valid occupancy status.'),
-  };
-}
-
-RouteType _routeTypeFromInt(int value) {
-  return switch (value) {
-    0 => RouteType.lightRail,
-    1 => RouteType.heavyRail,
-    2 => RouteType.commuterRail,
-    3 => RouteType.bus,
-    4 => RouteType.ferry,
-    _ => throw AssertionError('$value is not a valid route type.'),
-  };
-}
-
-LocationType _locationTypeFromInt(int value) {
-  return switch (value) {
-    0 => LocationType.stop,
-    1 => LocationType.station,
-    2 => LocationType.stationEntranceOrExit,
-    3 => LocationType.genericNode,
-    _ => throw AssertionError('$value is not a valid location type.'),
-  };
-}
-
-WheelchairBoarding _wheelchairBoardingFromInt(int value) {
-  return switch (value) {
-    0 => WheelchairBoarding.noInformation,
-    1 => WheelchairBoarding.accessible,
-    2 => WheelchairBoarding.inaccessible,
-    _ => throw AssertionError('$value is not a valid wheelchair boarding.'),
-  };
+  factory WheelchairBoarding.fromJson(Object json) {
+    int value = json as int;
+    return switch (value) {
+      0 => noInformation,
+      1 => accessible,
+      2 => inaccessible,
+      _ => throw AssertionError('$value is not a valid wheelchair boarding.'),
+    };
+  }
 }
 
 /// Parses a color from a 6 digit hex string.
@@ -201,7 +217,7 @@ class CarriageDetails {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
     final OccupancyStatus? occupancyStatus =
         jsonMap['occupancyStatus'] != null
-            ? _occupancyStatusFromString(jsonMap['occupancyStatus'] as String)
+            ? OccupancyStatus.fromJson(jsonMap['occupancyStatus'])
             : null;
     return CarriageDetails(
       occupancyStatus: occupancyStatus,
@@ -251,15 +267,15 @@ class Vehicle {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
     final RevenueStatus? revenueStatus =
         jsonMap['revenueStatus'] != null
-            ? _revenueStatusFromString(jsonMap['revenueStatus'] as String)
+            ? RevenueStatus.fromJson(jsonMap['revenueStatus'])
             : null;
     final OccupancyStatus? occupancyStatus =
         jsonMap['occupancyStatus'] != null
-            ? _occupancyStatusFromString(jsonMap['occupancyStatus'] as String)
+            ? OccupancyStatus.fromJson(jsonMap['occupancyStatus'])
             : null;
     final VehicleStopStatus? currentStatus =
         jsonMap['currentStatus'] != null
-            ? _vehicleStatusFromString(jsonMap['currentStatus'] as String)
+            ? VehicleStopStatus.fromJson(jsonMap['currentStatus'])
             : null;
     final List<CarriageDetails>? carriages =
         (jsonMap['carriages'] as List?)
@@ -353,7 +369,7 @@ class Route {
     return Route(
       id: jsonMap['id'] as String,
       shapes: shapes,
-      type: _routeTypeFromInt(jsonMap['type'] as int),
+      type: RouteType.fromJson(jsonMap['type']),
       textColor: textColor,
       sortOrder: jsonMap['sortOrder'] as int?,
       shortName: jsonMap['shortName'] as String?,
@@ -409,15 +425,15 @@ class Stop {
         (jsonMap['routeIds'] as List).map((json) => json as String).toList();
     final WheelchairBoarding? wheelchairBoarding =
         jsonMap['wheelchairBoarding'] != null
-            ? _wheelchairBoardingFromInt(jsonMap['type'] as int)
+            ? WheelchairBoarding.fromJson(jsonMap['type'])
             : null;
     final RouteType? vehicleType =
         jsonMap['vehicleType'] != null
-            ? _routeTypeFromInt(jsonMap['type'] as int)
+            ? RouteType.fromJson(jsonMap['type'])
             : null;
     final LocationType? locationType =
         jsonMap['locationType'] != null
-            ? _locationTypeFromInt(jsonMap['type'] as int)
+            ? LocationType.fromJson(jsonMap['type'])
             : null;
     return Stop(
       id: jsonMap['id'] as String,
@@ -436,28 +452,5 @@ class Stop {
       atStreet: jsonMap['atStreet'] as String?,
       address: jsonMap['address'] as String?,
     );
-  }
-}
-
-class ResourceFilter {
-  const ResourceFilter({required this.types, this.routeIds, this.routeTypes});
-
-  final Set<String> types;
-  final Set<String>? routeIds;
-  final Set<RouteType>? routeTypes;
-
-  Object toJson() {
-    final Map<String, Object> json = <String, Object>{};
-
-    void addIfPresent(String fieldName, Object? value) {
-      if (value != null) {
-        json[fieldName] = value;
-      }
-    }
-
-    addIfPresent('types', types.toList());
-    addIfPresent('routeIds', routeIds?.toList());
-    addIfPresent('routeTypes', routeTypes?.toList());
-    return json;
   }
 }

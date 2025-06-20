@@ -1,11 +1,8 @@
-import 'dart:convert' show jsonDecode, jsonEncode;
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:nextt_app/animated_marker.dart';
 import 'package:nextt_app/api.dart' as api;
-import 'package:web_socket_channel/web_socket_channel.dart'
-    show WebSocketChannel;
+import 'package:nextt_app/stream.dart';
 
 class _MapShape {
   _MapShape(this.shape, this.polyline);
@@ -37,7 +34,23 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
-  WebSocketChannel? _channel;
+  _MapPageState() {
+    _stream.listen(
+      onRouteReset: _onRouteReset,
+      onRouteAdd: _onRouteAdd,
+      onRouteUpdate: _onRouteUpdate,
+      onRouteRemove: _onRouteRemove,
+      onVehicleReset: _onVehicleReset,
+      onVehicleAdd: _onVehicleAdd,
+      onVehicleUpdate: _onVehicleUpdate,
+      onVehicleRemove: _onVehicleRemove,
+    );
+    _stream.connect();
+  }
+
+  final ResourceStream _stream = ResourceStream(
+    ResourceFilter(types: ResourceType.values.toSet()),
+  );
   late GoogleMapController controller;
   final Map<String, _MapShape> _shapes = {};
   final Map<String, _MapRoute> _routes = {};
@@ -46,25 +59,24 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    _connectWebsocket();
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _closeWebsocket();
+    _stream.close();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _closeWebsocket();
+      _stream.close();
     }
     if (state == AppLifecycleState.resumed) {
-      if (_channel == null) {
-        _connectWebsocket();
+      if (!_stream.isOpen) {
+        _stream.connect();
       }
     }
   }
@@ -73,62 +85,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     controller = controller;
   }
 
-  /// Opens a new websocket channel.
-  void _connectWebsocket() {
-    // TODO: replace with real URI
-    _channel = WebSocketChannel.connect(Uri.parse('ws://10.220.48.189:3000'));
-    _channel!.stream.listen(_onWebSocketData, onDone: _onWebsocketDone);
-    // Send initial filter
-    _channel!.sink.add(
-      jsonEncode(api.ResourceFilter(types: {'route', 'vehicle'})),
-    );
-  }
-
-  void _closeWebsocket() {
-    _channel?.sink.close(0);
-  }
-
-  void _onWebsocketDone() {
-    _channel = null;
-  }
-
-  void _onWebSocketData(payload) {
-    final Map<String, dynamic> jsonMap =
-        jsonDecode(payload as String) as Map<String, dynamic>;
-    final String type = jsonMap['type'] as String;
-    final Object data = jsonMap['data'] as Object;
-    switch (type) {
-      case 'ROUTE_RESET':
-        _onRouteReset(data);
-        break;
-      case 'ROUTE_ADD':
-        _onRouteAdd(data);
-        break;
-      case 'ROUTE_UPDATE':
-        _onRouteUpdate(data);
-        break;
-      case 'ROUTE_REMOVE':
-        _onRouteRemove(data);
-        break;
-      case 'VEHICLE_RESET':
-        _onVehicleReset(data);
-        break;
-      case 'VEHICLE_ADD':
-        _onVehicleAdd(data);
-        break;
-      case 'VEHICLE_UPDATE':
-        _onVehicleUpdate(data);
-        break;
-      case 'VEHICLE_REMOVE':
-        _onVehicleRemove(data);
-        break;
-    }
-  }
-
-  void _onRouteReset(Object json) {
-    List jsonList = json as List;
-    for (final Object json in jsonList) {
-      final route = api.Route.fromJson(json);
+  void _onRouteReset(List<api.Route> routes) {
+    for (final api.Route route in routes) {
       if (_routes.containsKey(route.id)) {
         _removeRoute(route.id);
       }
@@ -136,28 +94,23 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onRouteAdd(Object json) {
-    final route = api.Route.fromJson(json);
+  void _onRouteAdd(api.Route route) {
     _addRoute(route);
   }
 
-  void _onRouteUpdate(Object json) {
-    final route = api.Route.fromJson(json);
+  void _onRouteUpdate(api.Route route) {
     if (_routes.containsKey(route.id)) {
       _removeRoute(route.id);
     }
     _addRoute(route);
   }
 
-  void _onRouteRemove(Object json) {
-    Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
-    _removeRoute(jsonMap['id']);
+  void _onRouteRemove(String routeId) {
+    _removeRoute(routeId);
   }
 
-  void _onVehicleReset(Object json) {
-    List jsonList = json as List;
-    for (final Object json in jsonList) {
-      final vehicle = api.Vehicle.fromJson(json);
+  void _onVehicleReset(List<api.Vehicle> vehicles) {
+    for (final api.Vehicle vehicle in vehicles) {
       if (_vehicles.containsKey(vehicle.id)) {
         _removeVehicle(vehicle.id);
       }
@@ -165,13 +118,11 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onVehicleAdd(Object json) {
-    final vehicle = api.Vehicle.fromJson(json);
+  void _onVehicleAdd(api.Vehicle vehicle) {
     _addVehicle(vehicle);
   }
 
-  void _onVehicleUpdate(Object json) {
-    final vehicle = api.Vehicle.fromJson(json);
+  void _onVehicleUpdate(api.Vehicle vehicle) {
     final mapVehicle = _vehicles[vehicle.id];
     if (mapVehicle != null) {
       mapVehicle.vehicle = vehicle;
@@ -181,9 +132,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onVehicleRemove(Object json) {
-    Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
-    _removeVehicle(jsonMap['id'] as String);
+  void _onVehicleRemove(String vehicleId) {
+    _removeVehicle(vehicleId);
   }
 
   /// Snaps a point to a route
@@ -343,6 +293,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                 polylines: Set.of(_shapes.values.map((e) => e.polyline)),
                 markers: markers,
                 onMapCreated: _onMapCreated,
+                cloudMapId: '430807d65e79d65b3e56ad5e',
               ),
           markers: Set.of(_vehicles.values.map((vehicle) => vehicle.marker)),
           onMarkerChanged: _onMarkerChanged,
