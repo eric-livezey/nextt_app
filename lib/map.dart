@@ -4,18 +4,30 @@ import 'package:nextt_app/animated_marker.dart';
 import 'package:nextt_app/api.dart' as api;
 import 'package:nextt_app/stream.dart';
 
+const LatLng _mapCenter = LatLng(42.3555, -71.0565);
+final AssetMapBitmap _vehicleMarkerIconBytes = AssetMapBitmap(
+  'assets/navigation.png',
+  width: 20,
+  height: 20,
+);
+final AssetMapBitmap _stopMarkerIconBytes = AssetMapBitmap(
+  'assets/mbta.png',
+  width: 12,
+  height: 12,
+);
+
 class _MapShape {
   _MapShape(this.shape, this.polyline);
 
-  final api.Shape shape;
+  api.Shape shape;
   Polyline polyline;
 }
 
 class _MapRoute {
   _MapRoute(this.route, this.shapes);
 
-  final api.Route route;
-  final List<_MapShape> shapes;
+  api.Route route;
+  List<_MapShape> shapes;
   bool visible = true;
 }
 
@@ -23,6 +35,13 @@ class _MapVehicle {
   _MapVehicle(this.vehicle, this.marker);
 
   api.Vehicle vehicle;
+  Marker marker;
+}
+
+class _MapStop {
+  _MapStop(this.stop, this.marker);
+
+  api.Stop stop;
   Marker marker;
 }
 
@@ -44,6 +63,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       onVehicleAdd: _onVehicleAdd,
       onVehicleUpdate: _onVehicleUpdate,
       onVehicleRemove: _onVehicleRemove,
+      onStopReset: _onStopReset,
     );
     _stream.connect();
   }
@@ -51,10 +71,10 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   final ResourceStream _stream = ResourceStream(
     ResourceFilter(types: ResourceType.values.toSet()),
   );
-  late GoogleMapController controller;
   final Map<String, _MapShape> _shapes = {};
   final Map<String, _MapRoute> _routes = {};
   final Map<String, _MapVehicle> _vehicles = {};
+  final Map<String, _MapStop> _stops = {};
 
   @override
   void initState() {
@@ -79,10 +99,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         _stream.connect();
       }
     }
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    controller = controller;
   }
 
   void _onRouteReset(List<api.Route> routes) {
@@ -136,6 +152,32 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     _removeVehicle(vehicleId);
   }
 
+  void _onStopReset(List<api.Stop> stops) {
+    for (final api.Stop stop in stops.where(
+      (stop) => stop.locationType == api.LocationType.stop,
+    )) {
+      if (_stops.containsKey(stop.id)) {
+        _removeStop(stop.id);
+      }
+      _addStop(stop);
+    }
+  }
+
+  void _onStopAdd(api.Stop stop) {
+    _addStop(stop);
+  }
+
+  void _onStopUpdate(api.Stop stop) {
+    if (_stops.containsKey(stop.id)) {
+      _removeStop(stop.id);
+    }
+    _addStop(stop);
+  }
+
+  void _onStopRemove(String stopId) {
+    _removeStop(stopId);
+  }
+
   /// Snaps a point to a route
   LatLng _snapPoint(LatLng coords, _MapRoute route) {
     return snapToRoute(
@@ -148,18 +190,48 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   /// Snaps all markers associated with the route
   void _snapMarkers(String routeId) {
     setState(() {
-      for (final mapVehicle in _vehicles.values) {
-        final vehicle = mapVehicle.vehicle;
-        if (mapVehicle.vehicle.routeId == routeId) {
+      for (final _MapVehicle mapVehicle in _vehicles.values) {
+        final api.Vehicle vehicle = mapVehicle.vehicle;
+        if (vehicle.routeId == routeId) {
           mapVehicle.marker = mapVehicle.marker.copyWith(
-            positionParam: _snapPoint(
-              vehicle.position,
-              _routes[vehicle.routeId]!,
-            ),
+            positionParam: _snapPoint(vehicle.position, _routes[routeId]!),
+          );
+        }
+      }
+      for (final _MapStop mapStop in _stops.values) {
+        final api.Stop stop = mapStop.stop;
+        if (stop.routeIds.contains(routeId)) {
+          mapStop.marker = mapStop.marker.copyWith(
+            positionParam: _snapPoint(stop.position, _routes[routeId]!),
           );
         }
       }
     });
+  }
+
+  void _addStop(api.Stop stop) {
+    MarkerId markerId = MarkerId(stop.id);
+    _MapStop mapStop = _MapStop(
+      stop,
+      Marker(
+        markerId: markerId,
+        position: stop.position,
+        infoWindow: InfoWindow(title: stop.name, snippet: stop.description),
+        icon: _stopMarkerIconBytes,
+        anchor: Offset(0.5, 0.5),
+      ),
+    );
+    setState(() {
+      _stops[stop.id] = mapStop;
+    });
+  }
+
+  _removeStop(String stopId) {
+    if (_stops.containsKey(stopId)) {
+      setState(() {
+        _stops.remove(stopId);
+      });
+    }
   }
 
   void _moveVehicle(_MapVehicle vehicle, LatLng target) {
@@ -184,17 +256,14 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _addVehicle(api.Vehicle vehicle) async {
+  void _addVehicle(api.Vehicle vehicle) {
     final markerId = MarkerId(vehicle.id);
     final marker = Marker(
       markerId: markerId,
       position: _snapPoint(vehicle.position, _routes[vehicle.routeId]!),
       infoWindow: InfoWindow(title: vehicle.label),
       onTap: () => _onVehicleTapped(markerId),
-      icon: await BitmapDescriptor.asset(
-        ImageConfiguration(size: Size(20, 20)),
-        "assets/navigation.png",
-      ),
+      icon: _vehicleMarkerIconBytes,
       anchor: Offset(0.5, 0.5),
       rotation: vehicle.bearing?.toDouble() ?? 0.0,
     );
@@ -287,15 +356,20 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
           builder:
               (context, markers) => GoogleMap(
                 initialCameraPosition: const CameraPosition(
-                  target: LatLng(42.3555, -71.0565),
+                  target: _mapCenter,
                   zoom: 12.0,
                 ),
                 polylines: Set.of(_shapes.values.map((e) => e.polyline)),
                 markers: markers,
-                onMapCreated: _onMapCreated,
                 cloudMapId: '430807d65e79d65b3e56ad5e',
+                myLocationEnabled: true,
+                mapToolbarEnabled: false,
               ),
-          markers: Set.of(_vehicles.values.map((vehicle) => vehicle.marker)),
+          markers: Set.of(
+            _vehicles.values
+                .map((vehicle) => vehicle.marker)
+                .followedBy(_stops.values.map((stop) => stop.marker)),
+          ),
           onMarkerChanged: _onMarkerChanged,
         ),
       ),

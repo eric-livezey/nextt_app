@@ -403,7 +403,7 @@ class Stop {
   });
 
   final String id;
-  final List<String> routeIds;
+  final Set<String> routeIds;
   final String name;
   final double latitude;
   final double longitude;
@@ -421,19 +421,19 @@ class Stop {
 
   factory Stop.fromJson(Object json) {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
-    final List<String> routeIds =
-        (jsonMap['routeIds'] as List).map((json) => json as String).toList();
+    final Set<String> routeIds =
+        (jsonMap['routeIds'] as List).map((json) => json as String).toSet();
     final WheelchairBoarding? wheelchairBoarding =
         jsonMap['wheelchairBoarding'] != null
-            ? WheelchairBoarding.fromJson(jsonMap['type'])
+            ? WheelchairBoarding.fromJson(jsonMap['wheelchairBoarding'])
             : null;
     final RouteType? vehicleType =
         jsonMap['vehicleType'] != null
-            ? RouteType.fromJson(jsonMap['type'])
+            ? RouteType.fromJson(jsonMap['vehicleType'])
             : null;
     final LocationType? locationType =
         jsonMap['locationType'] != null
-            ? LocationType.fromJson(jsonMap['type'])
+            ? LocationType.fromJson(jsonMap['locationType'])
             : null;
     return Stop(
       id: jsonMap['id'] as String,
