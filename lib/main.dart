@@ -5,7 +5,10 @@ import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:nextt_app/map.dart';
 
+// pages
 import 'package:nextt_app/pages/home.dart';
+import 'package:nextt_app/pages/favorites.dart';
+import 'package:nextt_app/pages/settings.dart';
 
 void main() {
   final GoogleMapsFlutterPlatform mapsImplementation =
@@ -96,6 +99,11 @@ class _HomePageState extends State<HomePage> {
             label: 'Home',
           ),
           NavigationDestination(
+            selectedIcon: Icon(Icons.favorite_outlined),
+            icon: Icon(Icons.favorite_border),
+            label: 'Favorites',
+          ),
+          NavigationDestination(
             selectedIcon: Icon(Icons.map),
             icon: Icon(Icons.map_outlined),
             label: 'Map',
@@ -112,15 +120,14 @@ class _HomePageState extends State<HomePage> {
             /// Home page
             HomeScreen(),
 
+            /// Favorites page
+            FavoritesPage(),
+
             /// Map page
             MapPage(),
 
-            /// Routes page
-            SizedBox.expand(
-              child: Center(
-                child: Text('Settings', style: theme.textTheme.titleLarge),
-              ),
-            ),
+            /// Setting page
+            SettingsPage(),
           ][currentPageIndex],
     );
   }

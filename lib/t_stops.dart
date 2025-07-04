@@ -83,7 +83,6 @@ final List<TrainStop> greenDStops = [
   TrainStop('Union Square'),
 ];
 
-
 // GREEN E Line stops
 final List<TrainStop> greenEStops = [
   TrainStop('Heath Street'),
@@ -129,7 +128,6 @@ final List<TrainStop> orangeStops = [
   TrainStop('Green Street'),
   TrainStop('Forest Hills'),
 ];
-
 
 // Blue Line Stops
 final List<TrainStop> blueStops = [
@@ -189,6 +187,105 @@ final List<TrainStop> redLineBraintreeStops = [
   TrainStop('Quincy Center'),
   TrainStop('Quincy Adams'),
   TrainStop('Braintree'),
+];
+
+
+
+// ALL GREEN STOPS
+
+final List<TrainStop> allGreenStops = [
+  TrainStop('Boston College'),
+  TrainStop('South Street'),
+  TrainStop('Chestnut Hill Avenue'),
+  TrainStop('Chiswick Road'),
+  TrainStop('Cleveland Circle'),
+  TrainStop('Sutherland Road'),
+  TrainStop('Washington Street'),
+  TrainStop('Warren Street'),
+  TrainStop('Allston Street'),
+  TrainStop('Griggs Street'),
+  TrainStop('Harvard Avenue'),
+  TrainStop('Packard’s Corner'),
+  TrainStop('Babcock Street'),
+  TrainStop('Armory Street'),
+  TrainStop('Boston University Central'),
+  TrainStop('Boston University East'),
+  TrainStop('Blandford Street'),
+  TrainStop('Kenmore'),
+  TrainStop('Hynes Convention Center'),
+  TrainStop('Copley'),
+  TrainStop('Arlington'),
+  TrainStop('Boylston'),
+  TrainStop('Park Street'),
+  TrainStop('Government Center'),
+
+  // C
+  TrainStop('Cleveland Circle'),
+  TrainStop('Englewood Avenue'),
+  TrainStop('Dean Road'),
+  TrainStop('Tappan Street'),
+  TrainStop('Washington Square'),
+  TrainStop('Fairbanks Street'),
+  TrainStop('Summit Avenue'),
+  TrainStop('Coolidge Corner'),
+  TrainStop('Saint Paul Street'),
+  TrainStop('Kent Street'),
+  TrainStop('Hawes Street'),
+  TrainStop('Saint Mary’s Street'),
+  TrainStop('Kenmore'),
+  TrainStop('Hynes Convention Center'),
+  TrainStop('Copley'),
+  TrainStop('Arlington'),
+  TrainStop('Boylston'),
+  TrainStop('Park Street'),
+  TrainStop('Government Center'),
+
+  // D
+  TrainStop('Riverside'),
+  TrainStop('Woodland'),
+  TrainStop('Waban'),
+  TrainStop('Eliot'),
+  TrainStop('Newton Highlands'),
+  TrainStop('Newton Centre'),
+  TrainStop('Chestnut Hill'),
+  TrainStop('Reservoir'),
+  TrainStop('Beaconsfield'),
+  TrainStop('Brookline Hills'),
+  TrainStop('Brookline Village'),
+  TrainStop('Longwood'),
+  TrainStop('Fenway'),
+  TrainStop('Kenmore'),
+  TrainStop('Hynes Convention Center'),
+  TrainStop('Copley'),
+  TrainStop('Arlington'),
+  TrainStop('Boylston'),
+  TrainStop('Park Street'),
+  TrainStop('Government Center'),
+  TrainStop('Haymarket'),
+  TrainStop('North Station'),
+  TrainStop('Science Park/West End'),
+  TrainStop('Lechmere'),
+  TrainStop('Union Square'),
+
+  // E
+  TrainStop('Heath Street'),
+  TrainStop('Back of the Hill'),
+  TrainStop('Riverway'),
+  TrainStop('Mission Park'),
+  TrainStop('Fenwood Rd'),
+  TrainStop('Brigham Circle'),
+  TrainStop('Longwood Medical Center'),
+  TrainStop('Museum of Fine Arts'),
+  TrainStop('Northeastern'),
+  TrainStop('Symphony'),
+  TrainStop('Prudential'),
+  TrainStop('Copley'),
+  TrainStop('Arlington'),
+  TrainStop('Boylston'),
+  TrainStop('Park Street'),
+  TrainStop('Government Center'),
+  TrainStop('Haymarket'),
+  TrainStop('North Station'),
 ];
 
 // Comments 1

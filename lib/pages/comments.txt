@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import '../t_stops.dart';
+
+// Remove TrainStop class from here if it's already in t_stops.dart
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  Color lineColor = const Color.fromARGB(204, 0, 149, 0);
+  String selectedLine = 'Green E';
+  late List<TrainStop> currentStops;
+
+  @override
+  void initState() {
+    super.initState();
+    currentStops = greenEStops;
+  }
+
+  void _onLineChanged(String? value) {
+    if (value == null) return;
+    setState(() {
+      selectedLine = value;
+      if (value == 'Green E') {
+        currentStops = greenEStops;
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
+      } else if (value == 'Green B') {
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
+        currentStops = greenBStops;
+      } else if (value == 'Green C') {
+        currentStops = greenCStops;
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
+      } else if (value == 'Green D') {
+        currentStops = greenDStops;
+        lineColor = const Color.fromARGB(204, 0, 149, 0);
+      } else if (value == 'Orange') {
+        currentStops = orangeStops;
+        lineColor = const Color.fromARGB(204, 255, 153, 0);
+      } else if (value == 'Blue') {
+        currentStops = blueStops;
+        lineColor = const Color.fromARGB(204, 0, 0, 255);
+      } else if (value == 'Red Ashmont') {
+        currentStops = redLineAshmontStops;
+        lineColor = const Color.fromARGB(204, 255, 0, 0);
+      } else if (value == 'Red Braintree') {
+        currentStops = redLineBraintreeStops;
+        lineColor = const Color.fromARGB(204, 255, 0, 0);
+      }
+    });
+  }
+
+  /*
+  PSEUDO CODE (AI Generated) - MAIN VISUAL STRUCTURE:
+
+  BUILD Widget:
+    CREATE Center widget
+      INSIDE: SingleChildScrollView (allows scrolling if content is too tall)
+        INSIDE: MAIN COLUMN (vertical layout) (this is where the main column is also created (comment added by Lucas))
+          ADD: Top spacing (SizedBox)
+          ADD: Dropdown menu (for selecting train line)
+          ADD: Spacing after dropdown (SizedBox)
+          
+          FOR EACH train stop in currentStops list:
+            CREATE: Padded ROW (horizontal layout)
+              LEFT SIDE: Clickable circular train icon
+                - Material wrapper (for ripple effects)
+                - InkWell (detects taps)
+                - Colored circle with train icon
+                - OnTap: Show popup dialog with train info
+              
+              MIDDLE: Horizontal spacer (SizedBox)
+              
+              RIGHT SIDE: Station name text
+                - Expanded (takes remaining space)
+                - Ellipsis if text too long
+          END FOR EACH
+        END MAIN COLUMN
+      END SingleChildScrollView
+    END Center
+
+  RESULT: Vertical scrollable list of train stops, each as a horizontal row
+  */
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+
+        // !!!!!!! PARENT COLUMN: Main container for all widgets !!!!!!!
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+            // Dropdown to select line
+            DropdownButton<String>(
+              value: selectedLine,
+              items: const [
+                DropdownMenuItem(value: 'Red Ashmont', child: Text('Red Line - Ashmont Branch')),
+                DropdownMenuItem(value: 'Red Braintree', child: Text('Red Line - Braintree Branch')),
+                DropdownMenuItem(value: 'Orange', child: Text('Orange Line')),
+                DropdownMenuItem(value: 'Blue', child: Text('Blue Line')),
+                DropdownMenuItem(value: 'Green B', child: Text('Green Line - B Branch')),
+                DropdownMenuItem(value: 'Green C', child: Text('Green Line - C Branch')),
+                DropdownMenuItem(value: 'Green D', child: Text('Green Line - D Branch')),
+                DropdownMenuItem(value: 'Green E', child: Text('Green Line - E Branch')),
+              ],
+              onChanged: _onLineChanged,
+            ),
+            SizedBox(height: 20),
+
+
+            // MAIN MAP FUNCTION: Create a widget for each train stop in the currentStops list
+            // Spread operator "..." takes th e list of widgets created by map() and adds each one as a separate child to the parent Column (Above drop down menu)
+            ...currentStops.map((trainstop) => 
+              
+              // WRAPPER: Add vertical padding around each train stop row
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),  // 8px top and bottom spacing
+                
+                // ROW LAYOUT: Create horizontal layout for each train stop
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,                 // Only take up needed horizontal space
+                  crossAxisAlignment: CrossAxisAlignment.center,  // Vertically center align items
+                  children: [
+                    
+                    // MORE ROW LAYOUT: 5% of screen width for left-of-row padding
+                    SizedBox(width: MediaQuery.of(context).size.width * 0.15),
+
+                    // LEFT SIDE: Clickable circular train icon
+                    Material(   // Material widget provides the foundation for ink ripple
+                      color: Colors.transparent,  // Transparent background (Transparent so ripple effect is visable)
+                      shape: const CircleBorder(),  // Ripple effect fits a circle
+                      
+                      child: InkWell(
+                        // TAP HANDLER: What happens when user taps the train icon
+                        onTap: () {
+                          // POPUP DIALOG: Train stop information
+                          showDialog(
+                            context: context,
+                            builder: (context) => Dialog(
+                              child: Container(
+                                // RESPONSIVE SIZING: Dialog size based on screen dimensions
+                                width: MediaQuery.of(context).size.width * 0.8,   // 80% of screen width
+                                height: MediaQuery.of(context).size.height * 0.6, // 60% of screen height
+                                
+                                // SIZE CONSTRAINTS: Set min/max boundaries for dialog
+                                constraints: const BoxConstraints(
+                                  maxWidth: 400,   // Never wider than 400px
+                                  maxHeight: 500,  // Never taller than 500px
+                                  minWidth: 250,   // Always at least 250px wide
+                                  minHeight: 300,  // Always at least 300px tall
+                                ),
+                                
+                                // DIALOG CONTENT: The actual popup content
+                                child: AlertDialog(
+                                  // DIALOG TITLE: Centered station name
+                                  title: Center(
+                                    child: Text(
+                                      trainstop.name, // Where the train stop's name comes from
+                                      style: TextStyle(
+                                        fontSize: 20, 
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // DIALOG BODY: Train information content
+                                  content: Column(
+                                    children: [
+                                      SizedBox(height: 16), // Spacing from title
+                                      
+                                      // TRAIN TIMES SECTION
+                                      // TODO: API BACK END CONNECTION BELONGS HERE
+                                      const Text('Next Trains:', 
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      const Text('Medford Tufts: 5 min'),  // Hardcoded sample data
+                                      const Text('Heath Street: 3 min'),   // Hardcoded sample data
+                                      
+                                      SizedBox(height: 16), // Section spacing
+                                      
+                                      // ALERTS SECTION  
+                                      const Text('Alerts:', 
+                                        style: TextStyle(fontWeight: FontWeight.bold)),
+                                      const Text('No current alerts'), // Hardcoded sample data
+                                    ],
+                                  ),
+                                  
+                                  // DIALOG BOX ACTION: This is where the close button is made
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context), // What actually closes the dialog
+                                      child: const Text('Close'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        
+                        // VISUAL FEEDBACK FOR TRAIN STOP ICON: Hover and tap effects
+                        customBorder: const CircleBorder(),               // Circular ripple effect
+                        hoverColor: const Color.fromRGBO(0, 0, 0, 0.3), // Semi-transparent black on hover
+                        
+                        // ICON CONTAINER: The actual circular train icon
+                        child: Column(
+                          children: [
+                            Ink(
+                              width: 60,   // Circle diameter
+                              height: 60,  // Circle diameter
+                              decoration: BoxDecoration(
+                                color: lineColor,           // Color based on train line (Red, Blue, etc.)
+                                shape: BoxShape.circle,     // Make it circular
+                              ),
+                              child: const Icon(Icons.train, color: Colors.white), // White train icon
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    // MIDDLE: Spacer between icon and text
+                    const SizedBox(width: 16), // 16px horizontal spacing
+                    
+                    // RIGHT SIDE: Train stop name text
+                    Expanded(
+                      // Expanded makes the text take up all remaining horizontal space
+                      // This ensures consistent alignment across all rows
+                      child: Text(
+                        trainstop.name,                              // Display station name
+                        style: const TextStyle(fontSize: 16),       // Text styling
+                        overflow: TextOverflow.ellipsis,             // Add "..." if text is too long
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+// END OF MAP FUNCTION: Convert each train stop object into a widget
