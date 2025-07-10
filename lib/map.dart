@@ -70,24 +70,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       onStopUpdate: _onStopUpdate,
       onStopRemove: _onStopRemove,
     );
-    _stream.filter.routeTypes = {
-      api.RouteType.lightRail,
-      api.RouteType.heavyRail,
-      api.RouteType.commuterRail,
-      api.RouteType.bus,
-    };
-    _stream.connect().then((value) {
-      _stream.filter.routeTypes = {
-        api.RouteType.lightRail,
-        api.RouteType.heavyRail,
-      };
-      _stream.commit();
-    });
+    _stream.connect();
   }
 
   final ResourceStream _stream = ResourceStream(
     ResourceFilter(
       types: {ResourceType.route, ResourceType.stop, ResourceType.vehicle},
+      routeTypes: {api.RouteType.lightRail, api.RouteType.heavyRail},
     ),
   );
   final List<_MapRoute> _routeList = [];
