@@ -1,11 +1,22 @@
 import 'dart:convert' show jsonDecode, jsonEncode;
 
-import 'package:nextt_app/api.dart' show Route, RouteType, Stop, Vehicle;
+import 'package:nextt_app/api.dart'
+    show Route, RouteType, Stop, Vehicle, Resource;
 import 'package:web_socket_channel/web_socket_channel.dart'
     show WebSocketChannel;
 
-// TODO: replace with production URI
-final Uri websocketUri = Uri(scheme: 'ws', host: '10.220.48.189', port: 3000);
+// Temporary URI
+final Uri websocketUri = Uri(scheme: 'ws', host: '10.220.48.182', port: 3000);
+
+/// JSON constructors for each resource
+const Map<ResourceType, Resource Function(Object)?> jsonConstructors = {
+  ResourceType.route: Route.fromJson,
+  ResourceType.vehicle: Vehicle.fromJson,
+  ResourceType.stop: Stop.fromJson,
+  ResourceType.schedule: null,
+  ResourceType.prediction: null,
+  ResourceType.alert: null,
+};
 
 enum EventType {
   reset,
@@ -28,7 +39,10 @@ enum EventType {
 enum ResourceType {
   route,
   vehicle,
-  stop;
+  stop,
+  schedule,
+  prediction,
+  alert;
 
   factory ResourceType.fromJson(Object json) {
     String value = json as String;
@@ -36,6 +50,9 @@ enum ResourceType {
       'route' => route,
       'vehicle' => vehicle,
       'stop' => stop,
+      'schedule' => schedule,
+      'prediction' => prediction,
+      'alert' => alert,
       _ => throw AssertionError('$value is not a valid resource type.'),
     };
   }
@@ -56,14 +73,15 @@ Object _resourceTypeToJson(ResourceType value) {
     ResourceType.route => 'route',
     ResourceType.vehicle => 'vehicle',
     ResourceType.stop => 'stop',
+    ResourceType.schedule => 'schedule',
+    ResourceType.prediction => 'prediction',
+    ResourceType.alert => 'alert',
   };
 }
 
-List<T> Function(Object) _fromJsonList<T>(T Function(Object) fromJson) {
-  return (Object json) {
-    List jsonList = json as List;
-    return jsonList.map((json) => fromJson(json)).toList();
-  };
+List<T> _fromJsonList<T>(Object json, T Function(Object) fromJson) {
+  final List jsonList = json as List;
+  return jsonList.map((json) => fromJson(json)).toList();
 }
 
 void _applyIfPresent(Function? func, List args) {
@@ -72,38 +90,46 @@ void _applyIfPresent(Function? func, List args) {
   }
 }
 
-void _applyFromJson<T>(
-  void Function(T) func,
-  Object json, [
-  T Function(Object)? fromJson,
-]) {
-  final T arg = fromJson != null ? fromJson(json) : json as T;
-  func(arg);
-}
-
-void Function(Object)? _createListenerIfPresent<T>(
-  void Function(T)? func,
-  void Function(void Function(T), Object json, [T Function(Object)? fromJson])
-  apply, [
-  T Function(Object)? fromJson,
-]) {
-  if (func != null) {
-    return (Object json) => apply(func, json, fromJson);
-  }
-  return null;
-}
-
 String _idFromJson(Object json) {
   Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
   return jsonMap['id'] as String;
 }
 
-class ResourceFilter {
-  const ResourceFilter({required this.types, this.routeIds, this.routeTypes});
+Object? _payloadFromJson(ResourceType type, EventType event, Object json) {
+  Resource Function(Object)? fromJson = jsonConstructors[type];
+  if (fromJson != null) {
+    switch (event) {
+      case EventType.reset:
+        return _fromJsonList(json, fromJson);
+      case EventType.add:
+      case EventType.update:
+        return fromJson(json);
+      case EventType.remove:
+        return _idFromJson(json);
+    }
+  }
+  return null;
+}
 
+class ResourceFilter {
+  ResourceFilter({
+    required this.types,
+    this.routeIds,
+    this.routeTypes,
+    this.stopIds = const {},
+  });
+
+  /// Resource types to be tracked.
   final Set<ResourceType> types;
-  final Set<String>? routeIds;
-  final Set<RouteType>? routeTypes;
+
+  /// Route IDs which should be tracked.
+  Set<String>? routeIds;
+
+  /// Route types which should be tracked.
+  Set<RouteType>? routeTypes;
+
+  /// Stop IDs which should have predicitions and schedules tracked.
+  final Set<String> stopIds;
 
   Object toJson() {
     final Map<String, Object> json = <String, Object>{};
@@ -114,15 +140,13 @@ class ResourceFilter {
       }
     }
 
-    addIfPresent(
-      'types',
-      types.map((type) => _resourceTypeToJson(type)).toList(),
-    );
+    json['types'] = types.map((type) => _resourceTypeToJson(type)).toList();
     addIfPresent('routeIds', routeIds?.toList());
     addIfPresent(
       'routeTypes',
       routeTypes?.map((type) => _routeTypeToJson(type)).toList(),
     );
+    json['stopIds'] = stopIds.toList();
     return json;
   }
 }
@@ -132,22 +156,19 @@ class ResourceStream {
 
   WebSocketChannel? _channel;
   ResourceFilter filter;
-  void Function(EventType, ResourceType, Object)? _onData;
+  final Map<ResourceType, Map<String, Resource>> _cache = {};
+  final Map<ResourceType, Map<EventType, void Function(Object)>> _listeners =
+      {};
+  void Function(ResourceType, EventType, Object)? _onData;
   Function? _onError;
   void Function()? _onDone;
-  void Function(Object)? _onRouteReset;
-  void Function(Object)? _onRouteAdd;
-  void Function(Object)? _onRouteUpdate;
-  void Function(Object)? _onRouteRemove;
-  void Function(Object)? _onVehicleReset;
-  void Function(Object)? _onVehicleAdd;
-  void Function(Object)? _onVehicleUpdate;
-  void Function(Object)? _onVehicleRemove;
-  void Function(Object)? _onStopReset;
-  void Function(Object)? _onStopAdd;
-  void Function(Object)? _onStopUpdate;
-  void Function(Object)? _onStopRemove;
   bool get isOpen => _channel != null;
+  List<Route> get routes =>
+      _cache[ResourceType.route]?.values.toList() as List<Route>? ?? [];
+  List<Vehicle> get vehicles =>
+      _cache[ResourceType.vehicle]?.values.toList() as List<Vehicle>? ?? [];
+  List<Stop> get stops =>
+      _cache[ResourceType.stop]?.values.toList() as List<Stop>? ?? [];
 
   /// Creates a new websocket connection.
   ///
@@ -163,7 +184,7 @@ class ResourceStream {
       onDone: _onWebSocketDone,
     );
     await _channel?.ready;
-    await commit();
+    commit();
   }
 
   /// Closes the websocket connection if it is open.
@@ -172,13 +193,16 @@ class ResourceStream {
   }
 
   /// Commit the resource filter if the stream is open.
-  Future<void> commit() async {
-    _channel?.sink.add(jsonEncode(filter));
+  void commit() {
+    WebSocketChannel? channel = _channel;
+    if (channel != null) {
+      channel.sink.add(jsonEncode(filter));
+    }
   }
 
   /// Set listeners.
   void listen({
-    void Function(EventType, ResourceType, Object)? onData,
+    void Function(ResourceType, EventType, Object)? onData,
     Function? onError,
     void Function()? onDone,
     void Function(List<Route>)? onRouteReset,
@@ -197,103 +221,92 @@ class ResourceStream {
     _onData = onData;
     _onError = onError;
     _onDone = onDone;
-    _onRouteReset = _createListenerIfPresent(
-      onRouteReset,
-      _applyFromJson<List<Route>>,
-      _fromJsonList(Route.fromJson),
-    );
-    _onRouteAdd = _createListenerIfPresent(
-      onRouteAdd,
-      _applyFromJson<Route>,
-      Route.fromJson,
-    );
-    _onRouteUpdate = _createListenerIfPresent(
-      onRouteUpdate,
-      _applyFromJson<Route>,
-      Route.fromJson,
-    );
-    _onRouteRemove = _createListenerIfPresent(
-      onRouteRemove,
-      _applyFromJson<String>,
-      _idFromJson,
-    );
-    _onVehicleReset = _createListenerIfPresent(
-      onVehicleReset,
-      _applyFromJson<List<Vehicle>>,
-      _fromJsonList(Vehicle.fromJson),
-    );
-    _onVehicleAdd = _createListenerIfPresent(
-      onVehicleAdd,
-      _applyFromJson<Vehicle>,
-      Vehicle.fromJson,
-    );
-    _onVehicleUpdate = _createListenerIfPresent(
-      onVehicleUpdate,
-      _applyFromJson<Vehicle>,
-      Vehicle.fromJson,
-    );
-    _onVehicleRemove = _createListenerIfPresent(
-      onVehicleRemove,
-      _applyFromJson<String>,
-      _idFromJson,
-    );
-    _onStopReset = _createListenerIfPresent(
-      onStopReset,
-      _applyFromJson<List<Stop>>,
-      _fromJsonList(Stop.fromJson),
-    );
-    _onStopAdd = _createListenerIfPresent(
-      onStopAdd,
-      _applyFromJson<Stop>,
-      Stop.fromJson,
-    );
-    _onStopUpdate = _createListenerIfPresent(
-      onStopUpdate,
-      _applyFromJson<Stop>,
-      Stop.fromJson,
-    );
-    _onStopRemove = _createListenerIfPresent(
-      onStopRemove,
-      _applyFromJson<String>,
-      _idFromJson,
-    );
+    _setResetListener(ResourceType.route, onRouteReset);
+    _setListener(ResourceType.route, EventType.add, onRouteAdd);
+    _setListener(ResourceType.route, EventType.update, onRouteUpdate);
+    _setListener(ResourceType.route, EventType.remove, onRouteRemove);
+    _setResetListener(ResourceType.vehicle, onVehicleReset);
+    _setListener(ResourceType.vehicle, EventType.add, onVehicleAdd);
+    _setListener(ResourceType.vehicle, EventType.update, onVehicleUpdate);
+    _setListener(ResourceType.vehicle, EventType.remove, onVehicleRemove);
+    _setResetListener(ResourceType.stop, onStopReset);
+    _setListener(ResourceType.stop, EventType.add, onStopAdd);
+    _setListener(ResourceType.stop, EventType.update, onStopUpdate);
+    _setListener(ResourceType.stop, EventType.remove, onStopRemove);
+  }
+
+  void _setListener<T extends Object>(
+    ResourceType type,
+    EventType event,
+    void Function(T)? listener,
+  ) {
+    if (listener != null) {
+      final Map<EventType, void Function(Object)> map =
+          _listeners[type] ?? (_listeners[type] = {});
+      map[event] = (Object data) {
+        listener(data as T);
+      };
+    } else {
+      _listeners[type]?.remove(event);
+    }
+  }
+
+  void _setResetListener<T extends Resource>(
+    ResourceType type,
+    void Function(List<T>)? listener,
+  ) {
+    EventType event = EventType.reset;
+    if (listener != null) {
+      final Map<EventType, void Function(Object)> map =
+          _listeners[type] ?? (_listeners[type] = {});
+      map[event] = (Object data) {
+        if (data is List) {
+          listener(data.cast<T>());
+        }
+      };
+    } else {
+      _listeners[type]?.remove(event);
+    }
+  }
+
+  void _updateCache(ResourceType type, EventType event, Object payload) {
+    final Map<String, Resource> cache = _cache[type] ?? (_cache[type] = {});
+    switch (event) {
+      case EventType.reset:
+        cache.clear();
+        List<Resource> resources = payload as List<Resource>;
+        for (Resource resource in resources) {
+          cache[resource.id] = resource;
+        }
+        break;
+      case EventType.add:
+      case EventType.update:
+        Resource resource = payload as Resource;
+        cache[resource.id] = resource;
+        break;
+      case EventType.remove:
+        cache.remove(payload as String);
+        break;
+    }
   }
 
   void _onWebSocketData(json) {
     final Map<String, dynamic> jsonMap =
         jsonDecode(json) as Map<String, dynamic>;
-    final EventType event = EventType.fromJson(jsonMap['event']);
     final ResourceType type = ResourceType.fromJson(jsonMap['type']);
+    final EventType event = EventType.fromJson(jsonMap['event']);
     final Object data = jsonMap['data'];
 
-    _applyIfPresent(_onData, [event, type, data]);
-    Function? func = switch (type) {
-      ResourceType.route => switch (event) {
-        EventType.reset => _onRouteReset,
-        EventType.add => _onRouteAdd,
-        EventType.update => _onRouteUpdate,
-        EventType.remove => _onRouteRemove,
-      },
-      ResourceType.vehicle => switch (event) {
-        EventType.reset => _onVehicleReset,
-        EventType.add => _onVehicleAdd,
-        EventType.update => _onVehicleUpdate,
-        EventType.remove => _onVehicleRemove,
-      },
-      ResourceType.stop => switch (event) {
-        EventType.reset => _onStopReset,
-        EventType.add => _onStopAdd,
-        EventType.update => _onStopUpdate,
-        EventType.remove => _onStopRemove,
-      },
-    };
-    _applyIfPresent(func, [data]);
+    Object? payload = _payloadFromJson(type, event, data);
+    if (payload != null) {
+      _updateCache(type, event, payload);
+      _applyIfPresent(_onData, [event, type, payload]);
+      _applyIfPresent(_listeners[type]?[event], [payload]);
+    }
   }
 
   void _onWebSocketDone() {
     _channel = null;
-    if (_onDone != null) {
-      _onDone!();
-    }
+    _applyIfPresent(_onDone, []);
   }
 }

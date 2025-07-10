@@ -1,7 +1,7 @@
 import 'dart:math' show pow;
 
-import 'package:flutter/material.dart' show Color;
-import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
+import 'package:flutter/material.dart' show Color, Colors, IconData, Icons;
+import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng, PatternItem;
 
 enum RevenueStatus {
   /// Indicates that the associated trip is accepting passengers.
@@ -227,10 +227,16 @@ class CarriageDetails {
   }
 }
 
+abstract class Resource {
+  const Resource({required this.id});
+
+  final String id;
+}
+
 /// Current state of a vehicle on a trip.
-class Vehicle {
+class Vehicle extends Resource {
   const Vehicle({
-    required this.id,
+    required super.id,
     required this.routeId,
     required this.updatedAt,
     required this.latitude,
@@ -246,7 +252,6 @@ class Vehicle {
     this.bearing,
   });
 
-  final String id;
   final String routeId;
   final DateTime updatedAt;
   final double latitude;
@@ -300,10 +305,9 @@ class Vehicle {
   }
 }
 
-class Shape {
-  const Shape({required this.id, required this.polyline});
+class Shape extends Resource {
+  const Shape({required super.id, required this.polyline});
 
-  final String id;
   final List<LatLng> polyline;
 
   factory Shape.fromJson(Object json) {
@@ -315,12 +319,13 @@ class Shape {
   }
 }
 
-class Route {
+class Route extends Resource {
   const Route({
-    required this.id,
+    required super.id,
     required this.shapes,
     required this.type,
-    this.textColor,
+    required this.color,
+    required this.textColor,
     this.sortOrder,
     this.shortName,
     this.longName,
@@ -328,13 +333,11 @@ class Route {
     this.directionNames,
     this.directionDestinations,
     this.description,
-    this.color,
   });
 
-  final String id;
   final List<Shape> shapes;
   final RouteType type;
-  final Color? textColor;
+  final Color textColor;
   final int? sortOrder;
   final String? shortName;
   final String? longName;
@@ -342,18 +345,34 @@ class Route {
   final List<String>? directionNames;
   final List<String>? directionDestinations;
   final String? description;
-  final Color? color;
+  final Color color;
+  int get width => switch (type) {
+    RouteType.lightRail => 5,
+    RouteType.heavyRail => 5,
+    RouteType.commuterRail => 3,
+    RouteType.bus => 1,
+    RouteType.ferry => 0,
+  };
+  List<PatternItem>? get patterns => null;
+  IconData get iconData => switch (type) {
+    RouteType.lightRail => Icons.train,
+    RouteType.heavyRail => Icons.train,
+    RouteType.commuterRail => Icons.tram,
+    RouteType.bus => Icons.directions_bus,
+    RouteType.ferry => Icons.directions_ferry,
+  };
 
+  /// Initialize a route from an object.
   factory Route.fromJson(Object json) {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
     final List<Shape> shapes =
         (jsonMap['shapes'] as List)
             .map((json) => Shape.fromJson(json as Object))
             .toList();
-    final Color? textColor =
+    final Color textColor =
         jsonMap['textColor'] != null
             ? _parseColor(jsonMap['textColor'] as String)
-            : null;
+            : Colors.black;
     final List<String>? directionNames =
         (jsonMap['directionNames'] as List?)
             ?.map((json) => json as String)
@@ -362,10 +381,10 @@ class Route {
         (jsonMap['directionDestinations'] as List?)
             ?.map((json) => json as String)
             .toList();
-    final Color? color =
+    final Color color =
         jsonMap['color'] != null
             ? _parseColor(jsonMap['color'] as String)
-            : null;
+            : Colors.black;
     return Route(
       id: jsonMap['id'] as String,
       shapes: shapes,
@@ -383,9 +402,9 @@ class Route {
   }
 }
 
-class Stop {
+class Stop extends Resource {
   const Stop({
-    required this.id,
+    required super.id,
     required this.routeIds,
     required this.name,
     required this.latitude,
@@ -402,7 +421,6 @@ class Stop {
     this.address,
   });
 
-  final String id;
   final Set<String> routeIds;
   final String name;
   final double latitude;
@@ -419,6 +437,7 @@ class Stop {
   final String? address;
   LatLng get position => LatLng(latitude, longitude);
 
+  /// Initialize a stop from an object.
   factory Stop.fromJson(Object json) {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
     final Set<String> routeIds =
