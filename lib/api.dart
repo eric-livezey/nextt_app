@@ -355,9 +355,9 @@ class Route extends Resource {
   };
   List<PatternItem>? get patterns => null;
   IconData get iconData => switch (type) {
-    RouteType.lightRail => Icons.train,
-    RouteType.heavyRail => Icons.train,
-    RouteType.commuterRail => Icons.tram,
+    RouteType.lightRail => Icons.tram,
+    RouteType.heavyRail => Icons.subway,
+    RouteType.commuterRail => Icons.train,
     RouteType.bus => Icons.directions_bus,
     RouteType.ferry => Icons.directions_ferry,
   };

@@ -163,7 +163,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
 
   void _onStopReset(List<api.Stop> stops) {
     for (final api.Stop stop in stops.where(
-      (stop) => stop.locationType == api.LocationType.stop,
+      (stop) =>
+          stop.locationType == api.LocationType.station ||
+          stop.locationType == api.LocationType.stop,
     )) {
       if (_stops.containsKey(stop.id)) {
         _removeStop(stop.id);
@@ -383,13 +385,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
    */
 
   void _hideRoute(String routeId) {
-    _stream.filter.routeIds ??=
-        _routes.values
-            .where((route) => route.visible)
-            .map((route) => route.route.id)
-            .toSet();
-    _stream.filter.routeIds?.remove(routeId);
-    _stream.commit();
     final _MapRoute? route = _routes[routeId];
     if (route != null) {
       // every stop where every related route is hidden or relates to the route ID
@@ -410,19 +405,22 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         stops: stops,
         vehicles: vehicles,
       );
+      _stream.filter.routeIds ??=
+          _routes.values
+              .where((route) => route.visible)
+              .map((route) => route.route.id)
+              .toSet();
+      _stream.filter.routeIds?.remove(routeId);
+      _stream.commit();
     }
   }
 
   void _showRoute(String routeId) {
-    _stream.filter.routeIds ??=
-        _routes.values
-            .where((route) => route.visible)
-            .map((route) => route.route.id)
-            .toSet();
-    _stream.filter.routeIds!.add(routeId);
-    _stream.commit();
     final _MapRoute? route = _routes[routeId];
     if (route != null) {
+      if (!_stream.filter.routeTypes!.contains(route.route.type)) {
+        _stream.filter.routeTypes!.add(route.route.type);
+      }
       // every stop where any related route is not hidden or relates to the route ID
       final Iterable<_MapStop> stops = _stops.values.where(
         (stop) =>
@@ -441,12 +439,17 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         stops: stops,
         vehicles: vehicles,
       );
+      _stream.filter.routeIds ??=
+          _routes.values
+              .where((route) => route.visible)
+              .map((route) => route.route.id)
+              .toSet();
+      _stream.filter.routeIds!.add(routeId);
+      _stream.commit();
     }
   }
 
   void _hideRouteType(api.RouteType routeType) {
-    _stream.filter.routeTypes!.remove(routeType);
-    _stream.commit();
     // every route with the route type
     final Iterable<_MapRoute> routes = _routes.values.where(
       (route) => route.visible && route.route.type == route.route.type,
@@ -476,11 +479,11 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       stops: stops,
       vehicles: vehicles,
     );
+    _stream.filter.routeTypes!.remove(routeType);
+    _stream.commit();
   }
 
   void _showRouteType(api.RouteType routeType) {
-    _stream.filter.routeTypes!.add(routeType);
-    _stream.commit();
     // every route with the route type
     final Iterable<_MapRoute> routes = _routes.values.where(
       (route) => route.visible && route.route.type == route.route.type,
@@ -508,6 +511,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       stops: stops,
       vehicles: vehicles,
     );
+    _stream.filter.routeTypes!.add(routeType);
+    _stream.commit();
   }
 
   _setElementVisibility(
@@ -600,7 +605,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
             <Widget>[
               DrawerHeader(
                 child: Text(
-                  'Filter Routes',
+                  'Filter By Route',
                   textAlign: TextAlign.center,
                   textScaler: TextScaler.linear(2),
                 ),
