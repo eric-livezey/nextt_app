@@ -14,7 +14,11 @@ void main() {
   final GoogleMapsFlutterPlatform mapsImplementation =
       GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {
-    initializeMapRenderer();
+    try {
+      initializeMapRenderer();
+    } catch (e) {
+      // empty
+    }
   }
   runApp(const App());
 }

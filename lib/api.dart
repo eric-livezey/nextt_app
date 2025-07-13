@@ -1,7 +1,8 @@
 import 'dart:math' show pow;
 
 import 'package:flutter/material.dart' show Color, Colors, IconData, Icons;
-import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng, PatternItem;
+import 'package:google_maps_flutter/google_maps_flutter.dart'
+    show LatLng, PatternItem;
 
 enum RevenueStatus {
   /// Indicates that the associated trip is accepting passengers.
@@ -406,6 +407,7 @@ class Stop extends Resource {
   const Stop({
     required super.id,
     required this.routeIds,
+    required this.children,
     required this.name,
     required this.latitude,
     required this.longitude,
@@ -422,6 +424,7 @@ class Stop extends Resource {
   });
 
   final Set<String> routeIds;
+  final List<Stop> children;
   final String name;
   final double latitude;
   final double longitude;
@@ -441,7 +444,7 @@ class Stop extends Resource {
   factory Stop.fromJson(Object json) {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
     final Set<String> routeIds =
-        (jsonMap['routeIds'] as List).map((json) => json as String).toSet();
+        (jsonMap['routeIds'] as List).cast<String>().toSet();
     final WheelchairBoarding? wheelchairBoarding =
         jsonMap['wheelchairBoarding'] != null
             ? WheelchairBoarding.fromJson(jsonMap['wheelchairBoarding'])
@@ -457,6 +460,10 @@ class Stop extends Resource {
     return Stop(
       id: jsonMap['id'] as String,
       routeIds: routeIds,
+      children:
+          (jsonMap['children'] as List)
+              .map((child) => Stop.fromJson(child))
+              .toList(),
       name: jsonMap['name'] as String,
       latitude: (jsonMap['latitude'] as num).toDouble(),
       longitude: (jsonMap['longitude'] as num).toDouble(),
@@ -470,6 +477,73 @@ class Stop extends Resource {
       description: jsonMap['description'] as String?,
       atStreet: jsonMap['atStreet'] as String?,
       address: jsonMap['address'] as String?,
+    );
+  }
+}
+
+class Prediction extends Resource {
+  const Prediction({
+    required super.id,
+    required this.arrivalTime,
+    required this.departureTime,
+    this.vehicleId,
+    this.stopId,
+    this.routeId,
+    this.scheduleId,
+    this.updateType,
+    this.stopSequence,
+    this.status,
+    this.scheduleRelationship,
+    this.revenueStatus,
+    this.directionId,
+    this.arrivalUncertainty,
+    this.departureUncertainty,
+  });
+
+  final DateTime arrivalTime;
+  final DateTime departureTime;
+  final String? vehicleId;
+  final String? stopId;
+  final String? routeId;
+  final String? scheduleId;
+  final String? updateType;
+  final int? stopSequence;
+  final String? status;
+  final String? scheduleRelationship;
+  final RevenueStatus? revenueStatus;
+  final String? directionId;
+  final int? arrivalUncertainty;
+  final int? departureUncertainty;
+
+  /// Initialize a prediction from an object.
+  factory Prediction.fromJson(Object json) {
+    final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    final DateTime arrivalTime = DateTime.parse(
+      jsonMap['arrivalTime'] as String,
+    );
+    final DateTime departureTime = DateTime.parse(
+      jsonMap['departureTime'] as String,
+    );
+    final RevenueStatus? revenueStatus =
+        jsonMap['revenueStatus'] != null
+            ? RevenueStatus.fromJson(jsonMap['revenueStatus'])
+            : null;
+    return Prediction(
+      id: jsonMap['id'] as String,
+      arrivalTime: arrivalTime,
+      departureTime: departureTime,
+      vehicleId: jsonMap['vehicleId'] as String?,
+      stopId: jsonMap['stopId'] as String?,
+      routeId: jsonMap['routeId'] as String?,
+      scheduleId: jsonMap['scheduleId'] as String?,
+      updateType: jsonMap['updateType'] as String?,
+      stopSequence: jsonMap['stopSequence'] as int?,
+      status: jsonMap['status'] as String?,
+      scheduleRelationship: jsonMap['scheduleRelationship'] as String?,
+      revenueStatus: revenueStatus,
+      directionId: jsonMap['directionId'] as String?,
+      arrivalUncertainty: jsonMap['arrivalUncertainty'] as int?,
+      departureUncertainty: jsonMap['departureUncertainty'] as int?,
     );
   }
 }
