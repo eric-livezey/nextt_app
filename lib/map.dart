@@ -19,16 +19,16 @@ final AssetMapBitmap _stopMarkerIconBytes = AssetMapBitmap(
 class _MapShape {
   _MapShape(this.shape, this.polyline);
 
-  api.Shape shape;
+  final api.Shape shape;
   Polyline polyline;
 }
 
 class _MapRoute {
-  _MapRoute(this.route, this.shapes);
+  _MapRoute(this.route, this.shapes, this.visible);
 
-  api.Route route;
+  final api.Route route;
   List<_MapShape> shapes;
-  bool visible = true;
+  bool visible;
 }
 
 class _MapVehicle {
@@ -41,7 +41,7 @@ class _MapVehicle {
 class _MapStop {
   _MapStop(this.stop, this.marker);
 
-  api.Stop stop;
+  final api.Stop stop;
   Marker marker;
 }
 
@@ -64,17 +64,24 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       onVehicleUpdate: _onVehicleUpdate,
       onVehicleRemove: _onVehicleRemove,
       onStopReset: _onStopReset,
+      onStopAdd: _onStopAdd,
+      onStopUpdate: _onStopUpdate,
+      onStopRemove: _onStopRemove,
     );
     _stream.connect();
   }
 
   final ResourceStream _stream = ResourceStream(
-    ResourceFilter(types: ResourceType.values.toSet()),
+    ResourceFilter(
+      types: {ResourceType.route, ResourceType.stop, ResourceType.vehicle},
+      routeTypes: {api.RouteType.lightRail, api.RouteType.heavyRail},
+    ),
   );
-  final Map<String, _MapShape> _shapes = {};
+  final List<_MapRoute> _routeList = [];
   final Map<String, _MapRoute> _routes = {};
   final Map<String, _MapVehicle> _vehicles = {};
   final Map<String, _MapStop> _stops = {};
+  String? _selectedStopId;
 
   @override
   void initState() {
@@ -102,16 +109,14 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   }
 
   void _onRouteReset(List<api.Route> routes) {
-    for (final api.Route route in routes) {
-      if (_routes.containsKey(route.id)) {
-        _removeRoute(route.id);
-      }
-      _addRoute(route);
-    }
+    _routes.clear();
+    _onRouteAdd(routes);
   }
 
-  void _onRouteAdd(api.Route route) {
-    _addRoute(route);
+  void _onRouteAdd(List<api.Route> routes) {
+    for (final api.Route route in routes) {
+      _addRoute(route);
+    }
   }
 
   void _onRouteUpdate(api.Route route) {
@@ -121,21 +126,21 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     _addRoute(route);
   }
 
-  void _onRouteRemove(String routeId) {
-    _removeRoute(routeId);
-  }
-
-  void _onVehicleReset(List<api.Vehicle> vehicles) {
-    for (final api.Vehicle vehicle in vehicles) {
-      if (_vehicles.containsKey(vehicle.id)) {
-        _removeVehicle(vehicle.id);
-      }
-      _addVehicle(vehicle);
+  void _onRouteRemove(List<String> routeIds) {
+    for (final String routeId in routeIds) {
+      _removeRoute(routeId);
     }
   }
 
-  void _onVehicleAdd(api.Vehicle vehicle) {
-    _addVehicle(vehicle);
+  void _onVehicleReset(List<api.Vehicle> vehicles) {
+    _vehicles.clear();
+    _onVehicleAdd(vehicles);
+  }
+
+  void _onVehicleAdd(List<api.Vehicle> vehicles) {
+    for (final api.Vehicle vehicle in vehicles) {
+      _addVehicle(vehicle);
+    }
   }
 
   void _onVehicleUpdate(api.Vehicle vehicle) {
@@ -148,23 +153,25 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onVehicleRemove(String vehicleId) {
-    _removeVehicle(vehicleId);
-  }
-
-  void _onStopReset(List<api.Stop> stops) {
-    for (final api.Stop stop in stops.where(
-      (stop) => stop.locationType == api.LocationType.stop,
-    )) {
-      if (_stops.containsKey(stop.id)) {
-        _removeStop(stop.id);
-      }
-      _addStop(stop);
+  void _onVehicleRemove(List<String> vehicleIds) {
+    for (final String vehicleId in vehicleIds) {
+      _removeVehicle(vehicleId);
     }
   }
 
-  void _onStopAdd(api.Stop stop) {
-    _addStop(stop);
+  void _onStopReset(List<api.Stop> stops) {
+    _stops.clear();
+    _onStopAdd(stops);
+  }
+
+  void _onStopAdd(List<api.Stop> stops) {
+    for (final api.Stop stop in stops.where(
+      (stop) =>
+          stop.locationType == api.LocationType.station ||
+          stop.locationType == api.LocationType.stop,
+    )) {
+      _addStop(stop);
+    }
   }
 
   void _onStopUpdate(api.Stop stop) {
@@ -174,8 +181,10 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     _addStop(stop);
   }
 
-  void _onStopRemove(String stopId) {
-    _removeStop(stopId);
+  void _onStopRemove(List<String> stopIds) {
+    for (final String stopId in stopIds) {
+      _removeStop(stopId);
+    }
   }
 
   /// Snaps a point to a route
@@ -210,8 +219,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   }
 
   void _addStop(api.Stop stop) {
-    MarkerId markerId = MarkerId(stop.id);
-    _MapStop mapStop = _MapStop(
+    final MarkerId markerId = MarkerId(stop.id);
+    final _MapStop mapStop = _MapStop(
       stop,
       Marker(
         markerId: markerId,
@@ -219,6 +228,10 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         infoWindow: InfoWindow(title: stop.name, snippet: stop.description),
         icon: _stopMarkerIconBytes,
         anchor: Offset(0.5, 0.5),
+        onTap: () {
+          _selectedStopId = markerId.value;
+          // TODO: Show stop sheet
+        },
       ),
     );
     setState(() {
@@ -257,12 +270,14 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   }
 
   void _addVehicle(api.Vehicle vehicle) {
-    final markerId = MarkerId(vehicle.id);
-    final marker = Marker(
+    final MarkerId markerId = MarkerId(vehicle.id);
+    final Marker marker = Marker(
       markerId: markerId,
-      position: _snapPoint(vehicle.position, _routes[vehicle.routeId]!),
+      position:
+          _routes.containsKey(vehicle.routeId)
+              ? _snapPoint(vehicle.position, _routes[vehicle.routeId]!)
+              : vehicle.position,
       infoWindow: InfoWindow(title: vehicle.label),
-      onTap: () => _onVehicleTapped(markerId),
       icon: _vehicleMarkerIconBytes,
       anchor: Offset(0.5, 0.5),
       rotation: vehicle.bearing?.toDouble() ?? 0.0,
@@ -275,7 +290,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     });
   }
 
-  _removeVehicle(String vehicleId) {
+  void _removeVehicle(String vehicleId) {
     if (_vehicles.containsKey(vehicleId)) {
       setState(() {
         _vehicles.remove(vehicleId);
@@ -283,73 +298,169 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  _onMarkerChanged(AnimatedMarker marker) {
+  void _onMarkerChanged(AnimatedMarker marker) {
     final vehicle = _vehicles[marker.markerId.value];
     if (vehicle != null) {
       vehicle.marker = marker;
     }
   }
 
-  _onVehicleTapped(MarkerId markerId) {
-    // TODO
+  void _insertRouteInOrder(_MapRoute route) {
+    int? sortOrder = route.route.sortOrder;
+    if (sortOrder == null) {
+      _routeList.add(route);
+    } else {
+      int index = _routeList.indexWhere(
+        (r) => r.route.sortOrder == null || r.route.sortOrder! > sortOrder,
+      );
+      if (index > 0 && _routeList[index - 1].route.id == route.route.id) {}
+      if (index >= 0 &&
+          (index <= 0 || _routeList[index - 1].route.id != route.route.id)) {
+        _routeList.insert(index, route);
+      } else {
+        _routeList.add(route);
+      }
+    }
   }
 
   void _addRoute(api.Route route) {
     final List<_MapShape> mapShapes = [];
     for (api.Shape shape in route.shapes) {
-      final PolylineId polylineId = PolylineId(shape.id);
       mapShapes.add(
         _MapShape(
           shape,
           Polyline(
-            polylineId: polylineId,
-            color: route.color ?? Colors.black,
+            polylineId: PolylineId(shape.id),
+            color: route.color,
             points: shape.polyline,
-            width: 5,
+            width: route.width,
           ),
         ),
       );
     }
+    final bool visible =
+        _stream.filter.routeTypes?.contains(route.type) == true &&
+            _stream.filter.routeIds == null ||
+        _stream.filter.routeIds?.contains(route.id) == true;
     setState(() {
-      _routes[route.id] = _MapRoute(route, mapShapes);
-      for (_MapShape shape in mapShapes) {
-        _shapes[shape.shape.id] = shape;
-      }
+      _MapRoute mapRoute = _MapRoute(route, mapShapes, visible);
+      _routes[route.id] = mapRoute;
+      _insertRouteInOrder(mapRoute);
       _snapMarkers(route.id);
     });
   }
 
   void _removeRoute(String routeId) {
-    setState(() {
-      if (_routes.containsKey(routeId)) {
-        final route = _routes[routeId]!;
-        for (final shape in route.shapes) {
-          final shapeId = shape.shape.id;
-          if (_shapes.containsKey(shapeId)) {
-            _shapes.remove(shapeId);
-          }
-        }
+    final _MapRoute? route = _routes[routeId];
+    if (route != null) {
+      setState(() {
         _routes.remove(routeId);
+        _routeList.removeWhere((route) => route.route.id == routeId);
+      });
+    }
+  }
+
+  /*
+   * --------------
+   * | Visibility |
+   * --------------
+   */
+
+  void _hideRoute(String routeId) {
+    final _MapRoute? route = _routes[routeId];
+    if (route != null) {
+      _setRoutesVisibility(false, [route]);
+      _stream.filter.routeIds ??=
+          _routes.values
+              .where((route) => route.visible)
+              .map((route) => route.route.id)
+              .toSet();
+      _stream.filter.routeIds?.remove(routeId);
+      _stream.commit();
+    }
+  }
+
+  void _showRoute(String routeId) {
+    final _MapRoute? route = _routes[routeId];
+    if (route != null) {
+      if (!_stream.filter.routeTypes!.contains(route.route.type)) {
+        _stream.filter.routeTypes!.add(route.route.type);
+      }
+      _setRoutesVisibility(true, [route]);
+      _stream.filter.routeIds ??=
+          _routes.values
+              .where((route) => route.visible)
+              .map((route) => route.route.id)
+              .toSet();
+      _stream.filter.routeIds!.add(routeId);
+      _stream.commit();
+    }
+  }
+
+  void _hideRouteType(api.RouteType routeType) {
+    // every route with the route type
+    final Iterable<_MapRoute> routes = _routes.values.where(
+      (route) => route.visible && route.route.type == route.route.type,
+    );
+    _setRoutesVisibility(false, routes);
+    _stream.filter.routeTypes!.remove(routeType);
+    _stream.commit();
+  }
+
+  void _showRouteType(api.RouteType routeType) {
+    // every route with the route type
+    final Iterable<_MapRoute> routes = _routes.values.where(
+      (route) => !route.visible && route.route.type == route.route.type,
+    );
+    _setRoutesVisibility(true, routes);
+    _stream.filter.routeTypes!.add(routeType);
+    _stream.commit();
+  }
+
+  _setRoutesVisibility(bool visible, Iterable<_MapRoute> routes) {
+    setState(() {
+      for (final _MapRoute route in routes) {
+        route.visible = visible;
       }
     });
   }
 
-  // void _toggleRouteVisible(String routeId) {
-  //   final route = _routes[routeId]!;
-  //   setState(() {
-  //     route.visible = false;
-  //     for (final shape in route.shapes) {
-  //       final polyline = shape.polyline;
-  //       shape.polyline = polyline.copyWith(visibleParam: !polyline.visible);
-  //     }
-  //   });
-  // }
+  void _toggleRouteTypeVisible(api.RouteType routeType) {
+    final bool visible = _stream.filter.routeTypes!.contains(routeType);
+    if (visible) {
+      _showRouteType(routeType);
+    } else {
+      _hideRouteType(routeType);
+    }
+  }
+
+  void _toggleRouteVisible(String routeId) {
+    final _MapRoute? route = _routes[routeId];
+    if (route != null) {
+      final bool visible = !route.visible;
+      if (visible) {
+        _showRoute(routeId);
+      } else {
+        _hideRoute(routeId);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.menu))],
+        actions: [
+          Builder(
+            builder:
+                (context) => IconButton(
+                  onPressed: () {
+                    Scaffold.of(context).openEndDrawer();
+                  },
+                  icon: Icon(Icons.filter_list),
+                ),
+          ),
+        ],
       ),
       body: SizedBox.expand(
         child: AnimatedMarkerMapBuilder(
@@ -359,7 +470,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                   target: _mapCenter,
                   zoom: 12.0,
                 ),
-                polylines: Set.of(_shapes.values.map((e) => e.polyline)),
+                polylines: Set.of(
+                  _routes.values
+                      .where((route) => route.visible)
+                      .expand(
+                        (route) => route.shapes.map((shape) => shape.polyline),
+                      ),
+                ),
                 markers: markers,
                 cloudMapId: '430807d65e79d65b3e56ad5e',
                 myLocationEnabled: true,
@@ -367,10 +484,79 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
               ),
           markers: Set.of(
             _vehicles.values
+                .where(
+                  (vehicle) =>
+                      _routes[vehicle.vehicle.routeId]?.visible == true,
+                )
                 .map((vehicle) => vehicle.marker)
-                .followedBy(_stops.values.map((stop) => stop.marker)),
+                .followedBy(
+                  _stops.values
+                      .where(
+                        (stop) => stop.stop.routeIds
+                            .map((id) => _routes[id])
+                            .any((route) => route?.visible == true),
+                      )
+                      .map((stop) => stop.marker),
+                )
+                .toSet(),
           ),
           onMarkerChanged: _onMarkerChanged,
+        ),
+      ),
+      endDrawer: Drawer(
+        child: ListView(
+          children: List.of(
+            <Widget>[
+                  DrawerHeader(
+                    child: Text(
+                      'Filter By Route',
+                      textAlign: TextAlign.center,
+                      textScaler: TextScaler.linear(2),
+                    ),
+                  ),
+                ]
+                .followedBy([
+                  CheckboxListTile(
+                    title: Text('Stops'),
+                    value: _stream.filter.types.contains(ResourceType.stop),
+                    onChanged: (bool? value) {
+                      if (value == true) {
+                        _stream.filter.types.add(ResourceType.stop);
+                      } else {
+                        _stream.filter.types.remove(ResourceType.stop);
+                      }
+                      _stream.commit();
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text('Vehicles'),
+                    value: _stream.filter.types.contains(ResourceType.vehicle),
+                    onChanged: (bool? value) {
+                      if (value == true) {
+                        _stream.filter.types.add(ResourceType.vehicle);
+                      } else {
+                        _stream.filter.types.remove(ResourceType.vehicle);
+                      }
+                      _stream.commit();
+                    },
+                  ),
+                ])
+                .followedBy(
+                  _routeList.map(
+                    (route) => CheckboxListTile(
+                      title: Text(route.route.longName ?? 'Unknown'),
+                      value: route.visible,
+                      onChanged: (bool? value) {
+                        _toggleRouteVisible(route.route.id);
+                      },
+                      secondary: Icon(
+                        route.route.iconData,
+                        color: route.route.color,
+                      ),
+                    ),
+                  ),
+                ),
+          ),
         ),
       ),
     );

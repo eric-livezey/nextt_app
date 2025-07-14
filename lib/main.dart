@@ -14,7 +14,11 @@ void main() {
   final GoogleMapsFlutterPlatform mapsImplementation =
       GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {
-    initializeMapRenderer();
+    try {
+      initializeMapRenderer();
+    } catch (e) {
+      // empty
+    }
   }
   runApp(const App());
 }
@@ -83,7 +87,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
     return Scaffold(
       bottomNavigationBar: NavigationBar(
         onDestinationSelected: (int index) {
