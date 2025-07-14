@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../t_stops.dart';
-import '../device-storage-services.dart'; // Import t_stops.dart to access train stops
+import '../device-storage-services.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,9 +11,69 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Color lineColor = const Color.fromARGB(204, 255, 0, 0);
-  late String selectedLine = 'Red Ashmont';
+  late Color lineColor = redLineColor;
+  late String selectedLine = 'Red Mattapan Trolley';
   late List<TrainStop> currentStops = redLineAshmontStops;
+
+  // Dropdown items
+  static List<DropdownMenuItem<String>> dropdownItems = [
+    DropdownMenuItem(
+      value: 'Red Mattapan Trolley',
+      child: _DropdownItemWithColor(
+        text: 'Red Line - Mattapan Trolley',
+        color: redLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Red Braintree',
+      child: _DropdownItemWithColor(
+        text: 'Red Line - Braintree',
+        color: redLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Orange',
+      child: _DropdownItemWithColor(
+        text: 'Orange Line',
+        color: orangeLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Blue',
+      child: _DropdownItemWithColor(
+        text: 'Blue Line',
+        color: blueLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Green B',
+      child: _DropdownItemWithColor(
+        text: 'Green Line - B Branch',
+        color: greenLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Green C',
+      child: _DropdownItemWithColor(
+        text: 'Green Line - C Branch',
+        color: greenLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Green D',
+      child: _DropdownItemWithColor(
+        text: 'Green Line - D Branch',
+        color: greenLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Green E',
+      child: _DropdownItemWithColor(
+        text: 'Green Line - E Branch',
+        color: greenLineColor,
+      ),
+    ),
+  ];
 
   @override
   void initState() {
@@ -30,30 +91,36 @@ class _HomeScreenState extends State<HomeScreen> {
     if (value == null) return;
     setState(() {
       selectedLine = value;
-      if (value == 'Green E') {
-        currentStops = greenEStops;
-        lineColor = const Color.fromARGB(204, 0, 149, 0);
-      } else if (value == 'Green B') {
-        lineColor = const Color.fromARGB(204, 0, 149, 0);
+
+      // GREEN
+      if (value == 'Green B') {
         currentStops = greenBStops;
+        lineColor = greenLineColor;
       } else if (value == 'Green C') {
         currentStops = greenCStops;
-        lineColor = const Color.fromARGB(204, 0, 149, 0);
+        lineColor = greenLineColor;
       } else if (value == 'Green D') {
         currentStops = greenDStops;
-        lineColor = const Color.fromARGB(204, 0, 149, 0);
-      } else if (value == 'Orange') {
+        lineColor = greenLineColor;
+      } else if (value == 'Green E') {
+        currentStops = greenEStops;
+        lineColor = greenLineColor;
+      }
+      // ORANGE
+        else if (value == 'Orange') {
         currentStops = orangeStops;
-        lineColor = const Color.fromARGB(204, 255, 153, 0);
+        lineColor = orangeLineColor;
+      // BLUE
       } else if (value == 'Blue') {
         currentStops = blueStops;
-        lineColor = const Color.fromARGB(204, 0, 0, 255);
-      } else if (value == 'Red Ashmont') {
+        lineColor = blueLineColor;
+      // RED
+      } else if (value == 'Red Mattapan Trolley') {
         currentStops = redLineAshmontStops;
-        lineColor = const Color.fromARGB(204, 255, 0, 0);
+        lineColor = redLineColor;
       } else if (value == 'Red Braintree') {
         currentStops = redLineBraintreeStops;
-        lineColor = const Color.fromARGB(204, 255, 0, 0);
+        lineColor = redLineColor;
       }
     });
   }
@@ -61,117 +128,106 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(176, 255, 255, 255), // Set main background to white
+      backgroundColor: const Color.fromARGB(176, 255, 255, 255), 
       body: Column(
         children: [
           // Header area (Dropdown for line selection)
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.grey[50]!,
-                  Colors.white,
-                ],
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // App title
-                    const Text(
-                      'NextT',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1a1a1a),
-                      ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // App title
+                  const SizedBox(height: 12),
+                  const Text(
+                    'NextT',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1a1a1a),
                     ),
-                    const SizedBox(height: 4),
-                    // Dropdown subtitle
-                    const Text(
-                      'Choose your line',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF666666),
-                        fontWeight: FontWeight.w400,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Choose your line',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF666666),
+                      fontWeight: FontWeight.w400,
                     ),
-                     const SizedBox(height: 10),
-                    // Dropdown container
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(
-                          color: lineColor.withValues(alpha: .3),
-                          width: 2,
-                        ),
-                        
+                  ),
+                  const SizedBox(height: 10),
+                  // Dropdown container
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.0),
+                      border: Border.all(
+                        color: lineColor.withValues(alpha: .3),
+                        width: 2,
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                        child: Row(
-                          children: [
-                            // Line color indicator
-                            Container(
-                              width: 4,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: lineColor,
-                                borderRadius: BorderRadius.circular(2),
+                      
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                      child: Row(
+                        children: [                      
+                          // --- DROP DOWN MENNU ---
+                          Expanded(
+                            child: DropdownButton2<String>(
+                              value: selectedLine,
+                              isExpanded: true,
+                              // removes underline by replacing it with an empty undefined box
+                              underline: const SizedBox(),
+                              style: const TextStyle(
+                                color: Color(0xFF1a1a1a),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            // Dropdown
-                            Expanded(
-                              child: DropdownButton<String>(
-                                value: selectedLine,
-                                isExpanded: true,
-                                // remove underline
-                                underline: const SizedBox(),
-                                dropdownColor: Colors.white,
-                                style: const TextStyle(
-                                  color: Color(0xFF1a1a1a),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                icon: Icon(
+                              iconStyleData: IconStyleData(
+                                icon: const Icon(
                                   Icons.expand_more,
-                                  color: lineColor,
-                                  size: 24,
                                 ),
-                                items: const [
-                                  DropdownMenuItem(value: 'Red Ashmont', child: Text('Red Line - Ashmont Branch')),
-                                  DropdownMenuItem(value: 'Red Braintree', child: Text('Red Line - Braintree Branch')),
-                                  DropdownMenuItem(value: 'Orange', child: Text('Orange Line')),
-                                  DropdownMenuItem(value: 'Blue', child: Text('Blue Line')),
-                                  DropdownMenuItem(value: 'Green B', child: Text('Green Line - B Branch')),
-                                  DropdownMenuItem(value: 'Green C', child: Text('Green Line - C Branch')),
-                                  DropdownMenuItem(value: 'Green D', child: Text('Green Line - D Branch')),
-                                  DropdownMenuItem(value: 'Green E', child: Text('Green Line - E Branch')),
-                                ],
-                                onChanged: _onLineChanged,
+                                iconSize: 24,
+                                iconEnabledColor: lineColor,
+                                iconDisabledColor: lineColor,
                               ),
+
+                              dropdownStyleData: DropdownStyleData(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12.0), // Match container radius
+                                  
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.4),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                elevation: 4,
+                                offset: const Offset(0, 8), // Slightly below the button
+                              ),
+                              items: dropdownItems,
+                              onChanged: _onLineChanged,
+
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
           // Scrollable content area
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 20.0),
+              padding: const EdgeInsets.symmetric(vertical: 5.0),
               child: Column(
                 children: [
                   // Map function to build train stop widgets
@@ -185,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           // Wrapped InkWell with Material to provide ripple effect
                           child: InkWell(
                             onTap: () {
-                              // Extra train stop info pop up
+                              // TRAIN STOP DIALOG BOX
                               showDialog(
                                 context: context,
                                 builder: (context) => Dialog(
@@ -212,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       content: Column(
                                         children: [
                                           const SizedBox(height: 16),
-                                          // API BACK END CONNECTION BELONGS HERE
+                                          //TODO API BACK END CONNECTION BELONGS HERE
                                           const Text('Next Trains:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                           const Text('Medford Tufts: 5 min'),
                                           const Text('Heath Street: 3 min'),
@@ -226,8 +282,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                           child: Column(
                                             children: [
                                               TextButton(
-                                                onPressed: () => FavoritesService.addFavorite(trainstop.name), // TODO FIGURE OUT HOW TO GIVE FEEDBACK IT WAS ADDED
-                                                child: const Text('Favorite'),
+                                                onPressed: () {
+                                                  FavoritesService.addFavorite(trainstop.name, trainstop.color, selectedLine); // TODO FIGURE OUT HOW TO GIVE FEEDBACK IT WAS ADDED
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('${trainstop.name} added to favorites!'),
+                                                    ),
+                                                  );
+                                                },
+                                                style: TextButton.styleFrom(
+                                                    foregroundColor: Colors.green,
+                                                  ),     
+                                                child: const Text('Add Favorite'),
                                               ),
                                               const SizedBox(height: 5),
                                               TextButton(
@@ -271,6 +337,45 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Custom widget for buiding drop down menu items with colored line indicators
+class _DropdownItemWithColor extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _DropdownItemWithColor({
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        // Colored line indicator
+        Container(
+          width: 4,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Text
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

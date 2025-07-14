@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
 
 // FEATURES
@@ -26,12 +27,14 @@ class FavoritesService {
   }
 
   // Add a unique favorite stop to the favorites list
-  static Future<void> addFavorite(String stop) async {
+  static Future<void> addFavorite(String stop, Color stopColor, String line) async {
     final storageReference = await SharedPreferences.getInstance();
     List<String> favorites = storageReference.getStringList(_favoritesKey) ?? [];
     
-    if (!favorites.contains(stop)) {
-      favorites.add(stop);
+    String stopWithColor = '${stopColor.toARGB32().toString()},$stop,$line';
+
+    if (!favorites.contains(stopWithColor)) {
+      favorites.add(stopWithColor);
       await storageReference.setStringList(_favoritesKey, favorites);
     }
   }
