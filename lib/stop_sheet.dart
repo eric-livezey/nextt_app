@@ -216,8 +216,7 @@ class StopSheet extends StatefulWidget {
   final ResourceStream stream;
   final bool isTempStream;
 
-  factory StopSheet.fromStopId(String stopId, Iterable<String> routeIds) {
-    final Set<String> routeIdSet = routeIds.toSet();
+  factory StopSheet.fromStopId(String stopId, Set<String> routeIds) {
     final ResourceStream stream = ResourceStream(
       ResourceFilter(
         types: const {
@@ -228,13 +227,13 @@ class StopSheet extends StatefulWidget {
           ResourceType.prediction,
           ResourceType.alert,
         },
-        routeIds: routeIdSet,
+        routeIds: routeIds,
         stopIds: {stopId},
       ),
     )..connect();
     return StopSheet(
       stopId: stopId,
-      routeIds: routeIdSet,
+      routeIds: routeIds,
       stream: stream,
       isTempStream: true,
     );
