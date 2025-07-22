@@ -130,7 +130,7 @@ class VehicleListTile extends StatelessWidget {
     this.occupancyStatus,
     this.stopStatus,
     this.delay,
-    required this.destination
+    required this.destination,
   });
 
   final Icon icon;
@@ -186,15 +186,15 @@ class VehicleListTile extends StatelessWidget {
       subtitle: Column(
         children: [
           Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: statusWidgets,
-            ),
-            Row (
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [Text(destination)]
-            )
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: statusWidgets,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [Text(destination)],
+          ),
         ],
       ),
       trailing: DurationTile(arrivalTime),
@@ -323,7 +323,9 @@ class _StopSheetState extends State<StopSheet> {
 
   void _onScheduleRemove(Iterable<String> scheduleIds) {
     final Set<String> scheduleIdSet = scheduleIds.toSet();
-    for (final VehiclePrediction prediction in _predictions.where((prediction) => scheduleIdSet.contains(prediction.scheduleId))) {
+    for (final VehiclePrediction prediction in _predictions.where(
+      (prediction) => scheduleIdSet.contains(prediction.scheduleId),
+    )) {
       prediction.delay = null;
     }
   }
@@ -475,7 +477,13 @@ class _StopSheetState extends State<StopSheet> {
                                                 delay:
                                                     prediction.delay?.inMinutes,
                                                 stopStatus: prediction.status,
-                                                destination: widget.stream.routes[prediction.routeId]!.directionDestinations![prediction.directionId],
+                                                destination:
+                                                    widget
+                                                        .stream
+                                                        .routes[prediction
+                                                            .routeId]!
+                                                        .directionDestinations![prediction
+                                                        .directionId],
                                               );
                                             })
                                             .toList(),
