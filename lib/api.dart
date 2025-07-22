@@ -149,6 +149,31 @@ enum WheelchairBoarding {
   }
 }
 
+enum PickupType {
+  /// Regularly scheduled pickup/dropoff
+  regular,
+
+  ///No pickup/dropoff available
+  none,
+
+  ///Must phone agency to arrange pickup/dropoff
+  phoneAgency,
+
+  ///Must coordinate with driver to arrange pickup/dropoff
+  coordinateDriver;
+
+  factory PickupType.fromJson(Object json) {
+    int value = json as int;
+    return switch (value) {
+      0 => regular,
+      1 => none,
+      2 => phoneAgency,
+      3 => coordinateDriver,
+      _ => throw AssertionError('$value is not a valid pickup type.'),
+    };
+  }
+}
+
 /// Parses a color from a 6 digit hex string.
 Color _parseColor(String source) {
   int value = int.parse(source, radix: 16);
@@ -327,9 +352,9 @@ class Route extends Resource {
     required this.type,
     required this.color,
     required this.textColor,
+    required this.shortName,
+    required this.longName,
     this.sortOrder,
-    this.shortName,
-    this.longName,
     this.fareClass,
     this.directionNames,
     this.directionDestinations,
@@ -339,9 +364,9 @@ class Route extends Resource {
   final List<Shape> shapes;
   final RouteType type;
   final Color textColor;
+  final String shortName;
+  final String longName;
   final int? sortOrder;
-  final String? shortName;
-  final String? longName;
   final String? fareClass;
   final List<String>? directionNames;
   final List<String>? directionDestinations;
@@ -391,9 +416,9 @@ class Route extends Resource {
       shapes: shapes,
       type: RouteType.fromJson(jsonMap['type']),
       textColor: textColor,
+      shortName: jsonMap['shortName'] as String,
+      longName: jsonMap['longName'] as String,
       sortOrder: jsonMap['sortOrder'] as int?,
-      shortName: jsonMap['shortName'] as String?,
-      longName: jsonMap['longName'] as String?,
       fareClass: jsonMap['fareClass'] as String?,
       directionNames: directionNames,
       directionDestinations: directionDestinations,
@@ -484,8 +509,9 @@ class Stop extends Resource {
 class Prediction extends Resource {
   const Prediction({
     required super.id,
-    required this.arrivalTime,
-    required this.departureTime,
+    this.arrivalTime,
+    this.departureTime,
+    this.directionId,
     this.vehicleId,
     this.stopId,
     this.routeId,
@@ -495,13 +521,12 @@ class Prediction extends Resource {
     this.status,
     this.scheduleRelationship,
     this.revenueStatus,
-    this.directionId,
     this.arrivalUncertainty,
     this.departureUncertainty,
   });
 
-  final DateTime arrivalTime;
-  final DateTime departureTime;
+  final DateTime? arrivalTime;
+  final DateTime? departureTime;
   final String? vehicleId;
   final String? stopId;
   final String? routeId;
@@ -511,19 +536,21 @@ class Prediction extends Resource {
   final String? status;
   final String? scheduleRelationship;
   final RevenueStatus? revenueStatus;
-  final String? directionId;
+  final int? directionId;
   final int? arrivalUncertainty;
   final int? departureUncertainty;
 
   /// Initialize a prediction from an object.
   factory Prediction.fromJson(Object json) {
     final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
-    final DateTime arrivalTime = DateTime.parse(
-      jsonMap['arrivalTime'] as String,
-    );
-    final DateTime departureTime = DateTime.parse(
-      jsonMap['departureTime'] as String,
-    );
+    final DateTime? arrivalTime =
+        jsonMap['arrivalTime'] != null
+            ? DateTime.parse(jsonMap['arrivalTime'] as String)
+            : null;
+    final DateTime? departureTime =
+        jsonMap['departureTime'] != null
+            ? DateTime.parse(jsonMap['departureTime'] as String)
+            : null;
     final RevenueStatus? revenueStatus =
         jsonMap['revenueStatus'] != null
             ? RevenueStatus.fromJson(jsonMap['revenueStatus'])
@@ -541,9 +568,67 @@ class Prediction extends Resource {
       status: jsonMap['status'] as String?,
       scheduleRelationship: jsonMap['scheduleRelationship'] as String?,
       revenueStatus: revenueStatus,
-      directionId: jsonMap['directionId'] as String?,
+      directionId: jsonMap['directionId'] as int?,
       arrivalUncertainty: jsonMap['arrivalUncertainty'] as int?,
       departureUncertainty: jsonMap['departureUncertainty'] as int?,
+    );
+  }
+}
+
+class Schedule extends Resource {
+  const Schedule({
+    required super.id,
+    required this.stopId,
+    this.timepoint,
+    this.stopSequence,
+    this.stopHeadsign,
+    this.pickupType,
+    this.dropOffType,
+    this.directionId,
+    this.departureTime,
+    this.arrivalTime,
+  });
+
+  final String stopId;
+  final bool? timepoint;
+  final int? stopSequence;
+  final String? stopHeadsign;
+  final PickupType? pickupType;
+  final PickupType? dropOffType;
+  final int? directionId;
+  final DateTime? departureTime;
+  final DateTime? arrivalTime;
+
+  /// Initialize a schedule from an object.
+  factory Schedule.fromJson(Object json) {
+    final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    final PickupType? pickupType =
+        jsonMap['pickupType'] != null
+            ? PickupType.fromJson(jsonMap['pickupType'])
+            : null;
+    final PickupType? dropOffType =
+        jsonMap['dropOffType'] != null
+            ? PickupType.fromJson(jsonMap['dropOffType'])
+            : null;
+    final DateTime? arrivalTime =
+        jsonMap['arrivalTime'] != null
+            ? DateTime.parse(jsonMap['arrivalTime'] as String)
+            : null;
+    final DateTime? departureTime =
+        jsonMap['departureTime'] != null
+            ? DateTime.parse(jsonMap['departureTime'] as String)
+            : null;
+    return Schedule(
+      id: jsonMap['id'] as String,
+      stopId: jsonMap['stopId'] as String,
+      timepoint: json['timePoint'] as bool?,
+      stopSequence: jsonMap['stopSequence'] as int?,
+      stopHeadsign: jsonMap['stopHeadsign'] as String?,
+      pickupType: pickupType,
+      dropOffType: dropOffType,
+      directionId: jsonMap['directionId'] as int?,
+      departureTime: departureTime,
+      arrivalTime: arrivalTime,
     );
   }
 }

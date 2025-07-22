@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:nextt_app/animated_marker.dart';
 import 'package:nextt_app/api.dart' as api;
+import 'package:nextt_app/stop_sheet.dart';
 import 'package:nextt_app/stream.dart';
 
 const LatLng _mapCenter = LatLng(42.3555, -71.0565);
@@ -73,15 +75,25 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
 
   final ResourceStream _stream = ResourceStream(
     ResourceFilter(
-      types: {ResourceType.route, ResourceType.stop, ResourceType.vehicle},
+      types: {
+        ResourceType.route,
+        ResourceType.stop,
+        ResourceType.vehicle,
+        ResourceType.alert,
+        ResourceType.schedule,
+        ResourceType.prediction,
+      },
       routeTypes: {api.RouteType.lightRail, api.RouteType.heavyRail},
+      stopIds: {},
     ),
   );
   final List<_MapRoute> _routeList = [];
   final Map<String, _MapRoute> _routes = {};
   final Map<String, _MapVehicle> _vehicles = {};
   final Map<String, _MapStop> _stops = {};
-  String? _selectedStopId;
+  // ignore: unused_field
+  late GoogleMapController _controller;
+  PersistentBottomSheetController? _stopSheetController;
 
   @override
   void initState() {
@@ -93,6 +105,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stream.close();
+    _stopSheetController?.close();
     super.dispose();
   }
 
@@ -109,6 +122,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   }
 
   void _onRouteReset(List<api.Route> routes) {
+    _routeList.clear();
     _routes.clear();
     _onRouteAdd(routes);
   }
@@ -119,11 +133,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onRouteUpdate(api.Route route) {
-    if (_routes.containsKey(route.id)) {
-      _removeRoute(route.id);
+  void _onRouteUpdate(List<api.Route> routes) {
+    for (final api.Route route in routes) {
+      if (_routes.containsKey(route.id)) {
+        _removeRoute(route.id);
+      }
+      _addRoute(route);
     }
-    _addRoute(route);
   }
 
   void _onRouteRemove(List<String> routeIds) {
@@ -143,13 +159,15 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onVehicleUpdate(api.Vehicle vehicle) {
-    final mapVehicle = _vehicles[vehicle.id];
-    if (mapVehicle != null) {
-      mapVehicle.vehicle = vehicle;
-      _moveVehicle(mapVehicle, vehicle.position);
-    } else {
-      _addVehicle(vehicle);
+  void _onVehicleUpdate(List<api.Vehicle> vehicles) {
+    for (final api.Vehicle vehicle in vehicles) {
+      final mapVehicle = _vehicles[vehicle.id];
+      if (mapVehicle != null) {
+        mapVehicle.vehicle = vehicle;
+        _moveVehicle(mapVehicle, vehicle.position);
+      } else {
+        _addVehicle(vehicle);
+      }
     }
   }
 
@@ -174,11 +192,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onStopUpdate(api.Stop stop) {
-    if (_stops.containsKey(stop.id)) {
-      _removeStop(stop.id);
+  void _onStopUpdate(List<api.Stop> stops) {
+    for (final api.Stop stop in stops) {
+      if (_stops.containsKey(stop.id)) {
+        _removeStop(stop.id);
+      }
+      _addStop(stop);
     }
-    _addStop(stop);
   }
 
   void _onStopRemove(List<String> stopIds) {
@@ -229,8 +249,24 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         icon: _stopMarkerIconBytes,
         anchor: Offset(0.5, 0.5),
         onTap: () {
-          _selectedStopId = markerId.value;
-          // TODO: Show stop sheet
+          _stopSheetController = showBottomSheet(
+            context: context,
+            constraints: BoxConstraints.loose(
+              Size(
+                MediaQuery.of(context).size.width,
+                MediaQuery.of(context).size.height / 2.0,
+              ),
+            ),
+            builder:
+                (context) => StopSheet(
+                  stopId: markerId.value,
+                  routeIds: stop.routeIds,
+                  stream: _stream,
+                ),
+          );
+          // _controller.animateCamera(
+          //   CameraUpdateNewLatLngZoom(LatLng(stop.latitude - 0.015, stop.longitude), 14.0),
+          // );
         },
       ),
     );
@@ -277,10 +313,10 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
           _routes.containsKey(vehicle.routeId)
               ? _snapPoint(vehicle.position, _routes[vehicle.routeId]!)
               : vehicle.position,
-      infoWindow: InfoWindow(title: vehicle.label),
       icon: _vehicleMarkerIconBytes,
       anchor: Offset(0.5, 0.5),
       rotation: vehicle.bearing?.toDouble() ?? 0.0,
+      consumeTapEvents: true,
     );
 
     final _MapVehicle mapVehicle = _MapVehicle(vehicle, marker);
@@ -313,12 +349,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       int index = _routeList.indexWhere(
         (r) => r.route.sortOrder == null || r.route.sortOrder! > sortOrder,
       );
-      if (index > 0 && _routeList[index - 1].route.id == route.route.id) {}
-      if (index >= 0 &&
-          (index <= 0 || _routeList[index - 1].route.id != route.route.id)) {
-        _routeList.insert(index, route);
-      } else {
-        _routeList.add(route);
+      // if the route is not already in the list
+      if (index <= 0 || _routeList[index - 1].route.id != route.route.id) {
+        if (index >= 0) {
+          _routeList.insert(index, route);
+        } else {
+          _routeList.add(route);
+        }
       }
     }
   }
@@ -425,6 +462,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     });
   }
 
+  // ignore: unused_element
   void _toggleRouteTypeVisible(api.RouteType routeType) {
     final bool visible = _stream.filter.routeTypes!.contains(routeType);
     if (visible) {
@@ -434,10 +472,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _toggleRouteVisible(String routeId) {
+  void _setRouteVisible(String routeId, bool visible) {
     final _MapRoute? route = _routes[routeId];
     if (route != null) {
-      final bool visible = !route.visible;
       if (visible) {
         _showRoute(routeId);
       } else {
@@ -450,11 +487,17 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: Text(
+          'Map View',
+          style: TextStyle(fontWeight: FontWeight.bold),
+          textScaler: TextScaler.linear(1.25),
+        ),
         actions: [
           Builder(
             builder:
                 (context) => IconButton(
                   onPressed: () {
+                    _stopSheetController?.close();
                     Scaffold.of(context).openEndDrawer();
                   },
                   icon: Icon(Icons.filter_list),
@@ -481,22 +524,29 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                 cloudMapId: '430807d65e79d65b3e56ad5e',
                 myLocationEnabled: true,
                 mapToolbarEnabled: false,
+                onMapCreated: (controller) {
+                  _controller = controller;
+                },
               ),
           markers: Set.of(
-            _vehicles.values
-                .where(
-                  (vehicle) =>
-                      _routes[vehicle.vehicle.routeId]?.visible == true,
-                )
-                .map((vehicle) => vehicle.marker)
+            (_stream.filter.types.contains(ResourceType.vehicle)
+                    ? _vehicles.values
+                        .where(
+                          (vehicle) =>
+                              _routes[vehicle.vehicle.routeId]?.visible == true,
+                        )
+                        .map((vehicle) => vehicle.marker)
+                    : <Marker>[])
                 .followedBy(
-                  _stops.values
-                      .where(
-                        (stop) => stop.stop.routeIds
-                            .map((id) => _routes[id])
-                            .any((route) => route?.visible == true),
-                      )
-                      .map((stop) => stop.marker),
+                  _stream.filter.types.contains(ResourceType.stop)
+                      ? _stops.values
+                          .where(
+                            (stop) => stop.stop.routeIds
+                                .map((id) => _routes[id])
+                                .any((route) => route?.visible == true),
+                          )
+                          .map((stop) => stop.marker)
+                      : <Marker>[],
                 )
                 .toSet(),
           ),
@@ -511,7 +561,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                     child: Text(
                       'Filter By Route',
                       textAlign: TextAlign.center,
-                      textScaler: TextScaler.linear(2),
+                      style: TextStyle(fontSize: 32),
                     ),
                   ),
                 ]
@@ -520,11 +570,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                     title: Text('Stops'),
                     value: _stream.filter.types.contains(ResourceType.stop),
                     onChanged: (bool? value) {
-                      if (value == true) {
-                        _stream.filter.types.add(ResourceType.stop);
-                      } else {
-                        _stream.filter.types.remove(ResourceType.stop);
-                      }
+                      setState(() {
+                        if (value == true) {
+                          _stream.filter.types.add(ResourceType.stop);
+                        } else {
+                          _stream.filter.types.remove(ResourceType.stop);
+                        }
+                      });
                       _stream.commit();
                     },
                   ),
@@ -532,11 +584,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                     title: Text('Vehicles'),
                     value: _stream.filter.types.contains(ResourceType.vehicle),
                     onChanged: (bool? value) {
-                      if (value == true) {
-                        _stream.filter.types.add(ResourceType.vehicle);
-                      } else {
-                        _stream.filter.types.remove(ResourceType.vehicle);
-                      }
+                      setState(() {
+                        if (value == true) {
+                          _stream.filter.types.add(ResourceType.vehicle);
+                        } else {
+                          _stream.filter.types.remove(ResourceType.vehicle);
+                        }
+                      });
                       _stream.commit();
                     },
                   ),
@@ -544,10 +598,10 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                 .followedBy(
                   _routeList.map(
                     (route) => CheckboxListTile(
-                      title: Text(route.route.longName ?? 'Unknown'),
+                      title: Text(route.route.longName),
                       value: route.visible,
                       onChanged: (bool? value) {
-                        _toggleRouteVisible(route.route.id);
+                        _setRouteVisible(route.route.id, value == true);
                       },
                       secondary: Icon(
                         route.route.iconData,

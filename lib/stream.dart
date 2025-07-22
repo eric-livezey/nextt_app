@@ -1,19 +1,19 @@
 import 'dart:convert' show jsonDecode, jsonEncode;
 
 import 'package:nextt_app/api.dart'
-    show Prediction, Resource, Route, RouteType, Stop, Vehicle;
+    show Prediction, Resource, Route, RouteType, Schedule, Stop, Vehicle;
 import 'package:web_socket_channel/web_socket_channel.dart'
     show WebSocketChannel;
 
 // Temporary URI
-final Uri websocketUri = Uri(scheme: 'ws', host: '10.220.48.182', port: 3000);
+final Uri websocketUri = Uri(scheme: 'ws', host: '10.220.48.56', port: 3000);
 
 /// JSON constructors for each resource
 const Map<ResourceType, Resource Function(Object)?> jsonConstructors = {
   ResourceType.route: Route.fromJson,
   ResourceType.vehicle: Vehicle.fromJson,
   ResourceType.stop: Stop.fromJson,
-  ResourceType.schedule: null,
+  ResourceType.schedule: Schedule.fromJson,
   ResourceType.prediction: Prediction.fromJson,
   ResourceType.alert: null,
 };
@@ -101,9 +101,8 @@ Object? _payloadFromJson(ResourceType type, EventType event, Object json) {
     switch (event) {
       case EventType.reset:
       case EventType.add:
-        return _fromJsonList(json, fromJson);
       case EventType.update:
-        return fromJson(json);
+        return _fromJsonList(json, fromJson);
       case EventType.remove:
         return _fromJsonList(json, _idFromJson);
     }
@@ -163,15 +162,19 @@ class ResourceStream {
   Function? _onError;
   void Function()? _onDone;
   bool get isOpen => _channel != null;
-  List<Route> get routes =>
-      _cache[ResourceType.route]?.values.toList() as List<Route>? ?? [];
-  List<Vehicle> get vehicles =>
-      _cache[ResourceType.vehicle]?.values.toList() as List<Vehicle>? ?? [];
-  List<Stop> get stops =>
-      _cache[ResourceType.stop]?.values.toList() as List<Stop>? ?? [];
-  List<Prediction> get predictions =>
-      _cache[ResourceType.prediction]?.values.toList() as List<Prediction>? ??
-      [];
+  Map<String, Route> get routes =>
+      _cache[ResourceType.route]?.cast<String, Route>() ?? <String, Route>{};
+  Map<String, Vehicle> get vehicles =>
+      _cache[ResourceType.vehicle]?.cast<String, Vehicle>() ??
+      <String, Vehicle>{};
+  Map<String, Stop> get stops =>
+      _cache[ResourceType.stop]?.cast<String, Stop>() ?? <String, Stop>{};
+  Map<String, Schedule> get schedules =>
+      _cache[ResourceType.schedule]?.cast<String, Schedule>() ??
+      <String, Schedule>{};
+  Map<String, Prediction> get predictions =>
+      _cache[ResourceType.prediction]?.cast<String, Prediction>() ??
+      <String, Prediction>{};
 
   /// Creates a new websocket connection.
   ///
@@ -192,7 +195,7 @@ class ResourceStream {
 
   /// Closes the websocket connection if it is open.
   Future<void> close([int closeCode = 1000, String? closeReason]) async {
-    await _channel?.sink.close(closeCode);
+    await _channel?.sink.close(closeCode, closeReason);
   }
 
   /// Commit the resource filter if the stream is open.
@@ -203,81 +206,111 @@ class ResourceStream {
     }
   }
 
-  /// Set listeners.
+  /// Add listeners.
   void listen({
     void Function(ResourceType, EventType, Object)? onData,
     Function? onError,
     void Function()? onDone,
     void Function(List<Route>)? onRouteReset,
     void Function(List<Route>)? onRouteAdd,
-    void Function(Route)? onRouteUpdate,
+    void Function(List<Route>)? onRouteUpdate,
     void Function(List<String>)? onRouteRemove,
     void Function(List<Vehicle>)? onVehicleReset,
     void Function(List<Vehicle>)? onVehicleAdd,
-    void Function(Vehicle)? onVehicleUpdate,
+    void Function(List<Vehicle>)? onVehicleUpdate,
     void Function(List<String>)? onVehicleRemove,
     void Function(List<Stop>)? onStopReset,
     void Function(List<Stop>)? onStopAdd,
-    void Function(Stop)? onStopUpdate,
+    void Function(List<Stop>)? onStopUpdate,
     void Function(List<String>)? onStopRemove,
+    void Function(List<Schedule>)? onScheduleReset,
+    void Function(List<Schedule>)? onScheduleAdd,
+    void Function(List<Schedule>)? onScheduleUpdate,
+    void Function(List<String>)? onScheduleRemove,
     void Function(List<Prediction>)? onPredictionReset,
     void Function(List<Prediction>)? onPredictionAdd,
-    void Function(Prediction)? onPredictionUpdate,
+    void Function(List<Prediction>)? onPredictionUpdate,
     void Function(List<String>)? onPredictionRemove,
   }) {
-    _onData = onData;
-    _onError = onError;
-    _onDone = onDone;
-    _setListListener(ResourceType.route, EventType.reset, onRouteReset);
-    _setListListener(ResourceType.route, EventType.add, onRouteAdd);
-    _setListener(ResourceType.route, EventType.update, onRouteUpdate);
-    _setListListener(ResourceType.route, EventType.remove, onRouteRemove);
+    if (onData != null) {
+      _onData = onData;
+    }
+    if (onError != null) {
+      _onError = onError;
+    }
+    if (onDone != null) {
+      _onDone = onDone;
+    }
 
-    _setListListener(ResourceType.vehicle, EventType.reset, onVehicleReset);
-    _setListListener(ResourceType.vehicle, EventType.add, onVehicleAdd);
-    _setListener(ResourceType.vehicle, EventType.update, onVehicleUpdate);
-    _setListListener(ResourceType.vehicle, EventType.remove, onVehicleRemove);
+    _setEventListener(ResourceType.route, EventType.reset, onRouteReset);
+    _setEventListener(ResourceType.route, EventType.add, onRouteAdd);
+    _setEventListener(ResourceType.route, EventType.update, onRouteUpdate);
+    _setEventListener(ResourceType.route, EventType.remove, onRouteRemove);
 
-    _setListListener(ResourceType.stop, EventType.reset, onStopReset);
-    _setListListener(ResourceType.stop, EventType.add, onStopAdd);
-    _setListener(ResourceType.stop, EventType.update, onStopUpdate);
-    _setListListener(ResourceType.stop, EventType.remove, onStopRemove);
+    _setEventListener(ResourceType.vehicle, EventType.reset, onVehicleReset);
+    _setEventListener(ResourceType.vehicle, EventType.add, onVehicleAdd);
+    _setEventListener(ResourceType.vehicle, EventType.update, onVehicleUpdate);
+    _setEventListener(ResourceType.vehicle, EventType.remove, onVehicleRemove);
 
-    _setListListener(
+    _setEventListener(ResourceType.stop, EventType.reset, onStopReset);
+    _setEventListener(ResourceType.stop, EventType.add, onStopAdd);
+    _setEventListener(ResourceType.stop, EventType.update, onStopUpdate);
+    _setEventListener(ResourceType.stop, EventType.remove, onStopRemove);
+
+    _setEventListener(
+      ResourceType.schedule,
+      EventType.reset,
+      onScheduleReset,
+    );
+    _setEventListener(ResourceType.schedule, EventType.add, onScheduleAdd);
+    _setEventListener(
+      ResourceType.schedule,
+      EventType.update,
+      onScheduleUpdate,
+    );
+    _setEventListener(
+      ResourceType.schedule,
+      EventType.remove,
+      onScheduleRemove,
+    );
+
+    _setEventListener(
       ResourceType.prediction,
       EventType.reset,
       onPredictionReset,
     );
-    _setListListener(ResourceType.prediction, EventType.add, onPredictionAdd);
-    _setListener(ResourceType.prediction, EventType.update, onPredictionUpdate);
-    _setListListener(
+    _setEventListener(ResourceType.prediction, EventType.add, onPredictionAdd);
+    _setEventListener(
+      ResourceType.prediction,
+      EventType.update,
+      onPredictionUpdate,
+    );
+    _setEventListener(
       ResourceType.prediction,
       EventType.remove,
       onPredictionRemove,
     );
   }
 
-  void _setListener<T extends Object>(
-    ResourceType type,
-    EventType event,
-    void Function(T)? listener,
-  ) {
-    if (listener != null) {
-      final Map<EventType, void Function(Object)> map =
-          _listeners[type] ?? (_listeners[type] = {});
-      map[event] = (Object data) {
-        listener(data as T);
-      };
-    } else {
-      _listeners[type]?.remove(event);
+  /// Remove listeners
+  void removeListeners({
+    required Iterable<ResourceType> types,
+    Iterable<EventType>? events,
+  }) {
+    events ??= EventType.values;
+    for (final ResourceType type in types) {
+      for (final event in events) {
+        _setEventListener(type, event, null, true);
+      }
     }
   }
 
-  void _setListListener<T>(
+  void _setEventListener<T>(
     ResourceType type,
     EventType event,
-    void Function(List<T>)? listener,
-  ) {
+    void Function(List<T>)? listener, [
+    bool? eject,
+  ]) {
     if (listener != null) {
       final Map<EventType, void Function(Object)> map =
           _listeners[type] ?? (_listeners[type] = {});
@@ -286,32 +319,29 @@ class ResourceStream {
           listener(data.cast<T>());
         }
       };
-    } else {
+    } else if (eject == true) {
       _listeners[type]?.remove(event);
     }
   }
 
   void _updateCache(ResourceType type, EventType event, Object payload) {
-    final Map<String, Resource> cache = _cache[type] ?? (_cache[type] = {});
+    final Map<String, Resource> cache = _cache[type] ??= {};
     switch (event) {
       case EventType.reset:
         cache.clear();
+        continue add;
+      add:
       case EventType.add:
+      case EventType.update:
         final List<Resource> resources = payload as List<Resource>;
         for (final Resource resource in resources) {
           cache[resource.id] = resource;
         }
-        break;
-      case EventType.update:
-        final Resource resource = payload as Resource;
-        cache[resource.id] = resource;
-        break;
       case EventType.remove:
         final List<String> ids = payload as List<String>;
         for (final String id in ids) {
           cache.remove(id);
         }
-        break;
     }
   }
 

@@ -66,7 +66,7 @@ class App extends StatelessWidget {
     return MaterialApp(
       title: 'NextT',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 255, 255, 255)),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.grey),
       ),
       home: const HomePage(title: 'NextT'),
     );
