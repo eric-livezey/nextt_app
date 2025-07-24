@@ -1,7 +1,7 @@
 import 'dart:convert' show jsonDecode, jsonEncode;
 
 import 'package:nextt_app/api.dart'
-    show Prediction, Resource, Route, RouteType, Schedule, Stop, Vehicle;
+    show Alert, Prediction, Resource, Route, RouteType, Schedule, Stop, Vehicle;
 import 'package:web_socket_channel/web_socket_channel.dart'
     show WebSocketChannel;
 
@@ -15,7 +15,7 @@ const Map<ResourceType, Resource Function(Object)?> jsonConstructors = {
   ResourceType.stop: Stop.fromJson,
   ResourceType.schedule: Schedule.fromJson,
   ResourceType.prediction: Prediction.fromJson,
-  ResourceType.alert: null,
+  ResourceType.alert: Alert.fromJson,
 };
 
 enum EventType {
@@ -163,18 +163,22 @@ class ResourceStream {
   void Function()? _onDone;
   bool get isOpen => _channel != null;
   Map<String, Route> get routes =>
-      _cache[ResourceType.route]?.cast<String, Route>() ?? <String, Route>{};
+      _cache[ResourceType.route]?.cast<String, Route>() ??
+      const <String, Route>{};
   Map<String, Vehicle> get vehicles =>
       _cache[ResourceType.vehicle]?.cast<String, Vehicle>() ??
-      <String, Vehicle>{};
+      const <String, Vehicle>{};
   Map<String, Stop> get stops =>
-      _cache[ResourceType.stop]?.cast<String, Stop>() ?? <String, Stop>{};
+      _cache[ResourceType.stop]?.cast<String, Stop>() ?? const <String, Stop>{};
   Map<String, Schedule> get schedules =>
       _cache[ResourceType.schedule]?.cast<String, Schedule>() ??
-      <String, Schedule>{};
+      const <String, Schedule>{};
   Map<String, Prediction> get predictions =>
       _cache[ResourceType.prediction]?.cast<String, Prediction>() ??
-      <String, Prediction>{};
+      const <String, Prediction>{};
+  Map<String, Alert> get alerts =>
+      _cache[ResourceType.alert]?.cast<String, Alert>() ??
+      const <String, Alert>{};
 
   /// Creates a new websocket connection.
   ///
@@ -231,6 +235,10 @@ class ResourceStream {
     void Function(List<Prediction>)? onPredictionAdd,
     void Function(List<Prediction>)? onPredictionUpdate,
     void Function(List<String>)? onPredictionRemove,
+    void Function(List<Alert>)? onAlertReset,
+    void Function(List<Alert>)? onAlertAdd,
+    void Function(List<Alert>)? onAlertUpdate,
+    void Function(List<String>)? onAlertRemove,
   }) {
     if (onData != null) {
       _onData = onData;
@@ -257,11 +265,7 @@ class ResourceStream {
     _setEventListener(ResourceType.stop, EventType.update, onStopUpdate);
     _setEventListener(ResourceType.stop, EventType.remove, onStopRemove);
 
-    _setEventListener(
-      ResourceType.schedule,
-      EventType.reset,
-      onScheduleReset,
-    );
+    _setEventListener(ResourceType.schedule, EventType.reset, onScheduleReset);
     _setEventListener(ResourceType.schedule, EventType.add, onScheduleAdd);
     _setEventListener(
       ResourceType.schedule,
@@ -290,6 +294,11 @@ class ResourceStream {
       EventType.remove,
       onPredictionRemove,
     );
+
+    _setEventListener(ResourceType.alert, EventType.reset, onAlertReset);
+    _setEventListener(ResourceType.alert, EventType.add, onAlertAdd);
+    _setEventListener(ResourceType.alert, EventType.update, onAlertUpdate);
+    _setEventListener(ResourceType.alert, EventType.remove, onAlertRemove);
   }
 
   /// Remove listeners

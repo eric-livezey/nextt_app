@@ -632,3 +632,145 @@ class Schedule extends Resource {
     );
   }
 }
+
+class OptionalDateTimeRange {
+  const OptionalDateTimeRange({this.start, this.end});
+
+  final DateTime? start;
+  final DateTime? end;
+  Duration? get duration => start != null ? end?.difference(start!) : null;
+
+  factory OptionalDateTimeRange.fromJson(Object json) {
+    final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    final DateTime? start =
+        jsonMap['start'] != null
+            ? DateTime.parse(jsonMap['start'] as String)
+            : null;
+    final DateTime? end =
+        jsonMap['end'] != null
+            ? DateTime.parse(jsonMap['end'] as String)
+            : null;
+    return OptionalDateTimeRange(start: start, end: end);
+  }
+}
+
+class InformedEntity {
+  const InformedEntity({
+    this.trip,
+    this.stop,
+    this.routeType,
+    this.route,
+    this.facility,
+    this.directionId,
+    this.activities,
+  });
+
+  final String? trip;
+  final String? stop;
+  final RouteType? routeType;
+  final String? route;
+  final String? facility;
+  final int? directionId;
+  final List<String>? activities;
+
+  factory InformedEntity.fromJson(Object json) {
+    final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    RouteType? routeType =
+        jsonMap['routeType'] != null
+            ? RouteType.fromJson(jsonMap['routeType'])
+            : null;
+    return InformedEntity(
+      trip: jsonMap['trip'] as String?,
+      stop: jsonMap['stop'] as String?,
+      routeType: routeType,
+      route: jsonMap['route'] as String?,
+      facility: jsonMap['facility'] as String?,
+      directionId: jsonMap['directionId'] as int?,
+      activities: (jsonMap['activities'] as List<dynamic>?)?.cast<String>(),
+    );
+  }
+}
+
+class Alert extends Resource {
+  const Alert({
+    required super.id,
+    this.url,
+    required this.updatedAt,
+    this.timeframe,
+    this.shortHeader,
+    this.severity,
+    this.serviceEffect,
+    this.lifecycle,
+    required this.informedEntity,
+    this.imageAlternativeText,
+    this.image,
+    this.header,
+    this.effectName,
+    this.effect,
+    this.durationCertainty,
+    this.description,
+    required this.createdAt,
+    this.cause,
+    this.banner,
+    required this.activePeriod,
+  });
+
+  final Uri? url;
+  final DateTime updatedAt;
+  final String? timeframe;
+  final String? shortHeader;
+  final int? severity;
+  final String? serviceEffect;
+  final String? lifecycle;
+  final List<InformedEntity> informedEntity;
+  final String? imageAlternativeText;
+  final Uri? image;
+  final String? header;
+  final String? effectName;
+  final String? effect;
+  final String? durationCertainty;
+  final String? description;
+  final DateTime createdAt;
+  final String? cause;
+  final String? banner;
+  final List<OptionalDateTimeRange> activePeriod;
+
+  factory Alert.fromJson(Object json) {
+    final Map<String, dynamic> jsonMap = json as Map<String, dynamic>;
+    final Uri? url =
+        jsonMap['url'] != null ? Uri.parse(jsonMap['url'] as String) : null;
+    final Uri? image =
+        jsonMap['image'] != null ? Uri.parse(jsonMap['image'] as String) : null;
+    final List<InformedEntity> informedEntity =
+        (jsonMap['informedEntity'] as List<dynamic>?)
+            ?.map((e) => InformedEntity.fromJson(e))
+            .toList() ??
+        const <InformedEntity>[];
+    final List<OptionalDateTimeRange> activePeriod =
+        (jsonMap['activePeriod'] as List<dynamic>?)
+            ?.map((e) => OptionalDateTimeRange.fromJson(e))
+            .toList() ??
+        const <OptionalDateTimeRange>[];
+    return Alert(
+      id: jsonMap['id'] as String,
+      url: url,
+      updatedAt: DateTime.parse(jsonMap['updatedAt'] as String),
+      timeframe: jsonMap['timeframe'] as String?,
+      severity: jsonMap['severity'] as int?,
+      serviceEffect: jsonMap['serviceEffect'] as String?,
+      lifecycle: jsonMap['lifecycle'] as String?,
+      informedEntity: informedEntity,
+      imageAlternativeText: jsonMap['imageAlternativeText'] as String?,
+      image: image,
+      header: jsonMap['header'] as String?,
+      effectName: jsonMap['effectName'] as String?,
+      effect: jsonMap['effect'] as String?,
+      durationCertainty: jsonMap['durationCertainty'] as String?,
+      description: jsonMap['description'] as String?,
+      createdAt: DateTime.parse(jsonMap['createdAt'] as String),
+      cause: jsonMap['cause'] as String?,
+      banner: jsonMap['banner'] as String?,
+      activePeriod: activePeriod,
+    );
+  }
+}

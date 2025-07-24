@@ -125,7 +125,6 @@ class VehicleListTile extends StatelessWidget {
     super.key,
     required this.icon,
     required this.arrivalTime,
-    this.name,
     this.routeBadge,
     this.occupancyStatus,
     this.stopStatus,
@@ -135,7 +134,6 @@ class VehicleListTile extends StatelessWidget {
 
   final Icon icon;
   final DateTime arrivalTime;
-  final String? name;
   final RouteBadge? routeBadge;
   final OccupancyStatus? occupancyStatus;
   final VehicleStopStatus? stopStatus;
@@ -147,9 +145,6 @@ class VehicleListTile extends StatelessWidget {
     final List<Widget> titleWidgets = [];
     if (routeBadge != null) {
       titleWidgets.add(routeBadge!);
-    }
-    if (name != null) {
-      titleWidgets.add(Text(name!));
     }
     final List<Widget> statusWidgets = [];
     if (stopStatus != null) {
@@ -287,11 +282,11 @@ class _StopSheetState extends State<StopSheet> {
       widget.stream.close();
     } else {
       widget.stream
-        ..filter.stopIds.removeAll(
-          [widget.stopId].followedBy(_stop.children.map((child) => child.id)),
-        )
         ..removeListeners(
           types: [ResourceType.schedule, ResourceType.prediction],
+        )
+        ..filter.stopIds.removeAll(
+          [widget.stopId].followedBy(_stop.children.map((child) => child.id)),
         )
         ..commit();
     }
@@ -356,13 +351,17 @@ class _StopSheetState extends State<StopSheet> {
   void _onPredictionRemove(Iterable<String> predictionIds) {
     setState(() {
       final Set<String> predictionIdSet = predictionIds.toSet();
-      final int index = _predictions.indexWhere(
-        (prediction) => predictionIdSet.contains(prediction.predictionId),
-      );
-      if (index >= 0) {
-        final VehiclePrediction prediction = _predictions[index];
-        _predictions.removeAt(index);
-        _vehicleIds.remove(prediction.vehicleId);
+      int index = 0;
+      while (index >= 0) {
+        index = _predictions.indexWhere(
+          (prediction) => predictionIdSet.contains(prediction.predictionId),
+          index,
+        );
+        if (index >= 0) {
+          final VehiclePrediction prediction = _predictions[index];
+          _predictions.removeAt(index);
+          _vehicleIds.remove(prediction.vehicleId);
+        }
       }
     });
   }
@@ -395,13 +394,14 @@ class _StopSheetState extends State<StopSheet> {
       final int index = _predictions.indexWhere(
         (other) => vp.compareTo(other) <= 0,
       );
-      if (!_vehicleIds.contains(vp.vehicleId)) {
-        _vehicleIds.add(vp.vehicleId);
-        if (index >= 0) {
-          _predictions.insert(index, vp);
-        } else {
-          _predictions.add(vp);
-        }
+      if (_vehicleIds.contains(vp.vehicleId)) {
+        _onPredictionRemove([vp.predictionId]);
+      }
+      _vehicleIds.add(vp.vehicleId);
+      if (index >= 0) {
+        _predictions.insert(index, vp);
+      } else {
+        _predictions.add(vp);
       }
     }
   }
@@ -411,7 +411,7 @@ class _StopSheetState extends State<StopSheet> {
     return SizedBox.expand(
       child: Container(
         color: Theme.of(context).cardColor,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
         child: Column(
           children: [
             // Drag Handle
@@ -436,63 +436,64 @@ class _StopSheetState extends State<StopSheet> {
               ),
             ),
             // Tabs
-            DefaultTabController(
-              length: 2,
-              child: Column(
-                children: <Widget>[
-                  // Tab Bar
-                  TabBar(
-                    tabs:
-                        const {'Inbound', 'Outbound'}
-                            .map((directionName) => Tab(text: directionName))
-                            .toList(),
-                  ),
-                  // Tab Content
-                  Container(
-                    height: 300,
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: TabBarView(
-                      children:
-                          const {0, 1}
-                              .map(
-                                (directionId) => SizedBox(
-                                  height: 150,
-                                  child: ListView(
-                                    children:
-                                        _predictions
-                                            .where(
-                                              (prediction) =>
-                                                  prediction.directionId ==
-                                                  directionId,
-                                            )
-                                            .map((prediction) {
-                                              return VehicleListTile(
-                                                icon: Icon(prediction.icon),
-                                                arrivalTime:
-                                                    prediction.arrivalTime,
-                                                name: prediction.label,
-                                                routeBadge:
-                                                    prediction.routeBadge,
-                                                delay:
-                                                    prediction.delay?.inMinutes,
-                                                stopStatus: prediction.status,
-                                                destination:
-                                                    widget
-                                                        .stream
-                                                        .routes[prediction
-                                                            .routeId]!
-                                                        .directionDestinations![prediction
-                                                        .directionId],
-                                              );
-                                            })
-                                            .toList(),
-                                  ),
-                                ),
-                              )
+            Expanded(
+              child: DefaultTabController(
+                length: 2,
+                child: Column(
+                  children: <Widget>[
+                    // Tab Bar
+                    TabBar(
+                      tabs:
+                          const {'Inbound', 'Outbound'}
+                              .map((directionName) => Tab(text: directionName))
                               .toList(),
                     ),
-                  ),
-                ],
+                    // Tab Content
+                    Expanded(
+                      child: TabBarView(
+                        children:
+                            const {0, 1}
+                                .map(
+                                  (directionId) => SizedBox(
+                                    height: 150,
+                                    child: ListView(
+                                      children:
+                                          _predictions
+                                              .where(
+                                                (prediction) =>
+                                                    prediction.directionId ==
+                                                    directionId,
+                                              )
+                                              .map((prediction) {
+                                                return VehicleListTile(
+                                                  icon: Icon(prediction.icon),
+                                                  arrivalTime:
+                                                      prediction.arrivalTime,
+                                                  routeBadge:
+                                                      prediction.routeBadge,
+                                                  delay:
+                                                      prediction
+                                                          .delay
+                                                          ?.inMinutes,
+                                                  stopStatus: prediction.status,
+                                                  destination:
+                                                      widget
+                                                          .stream
+                                                          .routes[prediction
+                                                              .routeId]!
+                                                          .directionDestinations![prediction
+                                                          .directionId],
+                                                );
+                                              })
+                                              .toList(),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
