@@ -177,22 +177,16 @@ final List<TrainStop> redLineStops = [
   TrainStop("Broadway", redLineColor, "Red", "place-brdwy"),
   TrainStop("Andrew", redLineColor, "Red", "place-andrw"),
   TrainStop("JFK/UMass", redLineColor, "Red", "place-jfk"),
+  TrainStop("Savin Hill", redLineColor, "Red", "place-shmnl"),
+  TrainStop("Fields Corner", redLineColor, "Red", "place-fldcr"),
+  TrainStop("Shawmut", redLineColor, "Red", "place-smmnl"),
+  TrainStop("Ashmont", redLineColor, "Red", "place-asmnl"),
   TrainStop("North Quincy", redLineColor, "Red", "place-nqncy"),
   TrainStop("Wollaston", redLineColor, "Red", "place-wlsta"),
   TrainStop("Quincy Center", redLineColor, "Red", "place-qnctr"),
   TrainStop("Quincy Adams", redLineColor, "Red", "place-qamnl"),
   TrainStop("Braintree", redLineColor, "Red", "place-brntn"),
 ];
-
-// RED LINE - Ashmont Branch (JFK/UMass to Ashmont)
-final List<TrainStop> redLineAshmontBranch = [
-  TrainStop("JFK/UMass", redLineColor, "Red", "place-jfk"),
-  TrainStop("Savin Hill", redLineColor, "Red", "place-shmnl"),
-  TrainStop("Fields Corner", redLineColor, "Red", "place-fldcr"),
-  TrainStop("Shawmut", redLineColor, "Red", "place-smmnl"),
-  TrainStop("Ashmont", redLineColor, "Red", "place-asmnl"),
-];
-
 
 // Mattapan Trolley (High Speed Line from Ashmont)
 final List<TrainStop> mattapanTrolleyStops = [

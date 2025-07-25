@@ -27,11 +27,11 @@ class FavoritesService {
   }
 
   // Add a unique favorite stop to the favorites list
-  static Future<void> addFavorite(String stop, Color stopColor, String line) async {
+  static Future<void> addFavorite(String stop, Color stopColor, String line, String routeId, String stopId) async {
     final storageReference = await SharedPreferences.getInstance();
     List<String> favorites = storageReference.getStringList(_favoritesKey) ?? [];
     
-    String stopWithColor = '${stopColor.toARGB32().toString()},$stop,$line';
+    String stopWithColor = '${stopColor.toARGB32().toString()},$stop,$line,$routeId,$stopId';
 
     if (!favorites.contains(stopWithColor)) {
       favorites.add(stopWithColor);

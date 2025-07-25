@@ -13,22 +13,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Color lineColor = redLineColor;
-  late String selectedLine = 'Red Braintree';
+  late String selectedLine = 'Red Line - Braintree/Ashmont';
   late List<TrainStop> currentStops = redLineStops;
 
   // Dropdown items
   static List<DropdownMenuItem<String>> dropdownItems = [
     DropdownMenuItem(
-      value: 'Red Braintree',
+      value: 'Red Line - Braintree/Ashmont',
       child: _DropdownItemWithColor(
-        text: 'Red Line - Braintree',
-        color: redLineColor,
-      ),
-    ),
-    DropdownMenuItem(
-      value: 'Red Ashmont',
-      child: _DropdownItemWithColor(
-        text: 'Red Line - Ashmont',
+        text: 'Red Line  Braintree/Ashmont',
         color: redLineColor,
       ),
     ),
@@ -125,13 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
         lineColor = blueLineColor;
       }
       // RED
-      else if (value == 'Red Braintree') {
+      else if (value == 'Red Line - Braintree/Ashmont') {
         currentStops = redLineStops;
         lineColor = redLineColor;
-      } else if (value == 'Red Ashmont') {
-        currentStops = redLineAshmontBranch;
-        lineColor = redLineColor;
-      }
+      } 
       // MATTAPAN TROLLEY
       else if (value == 'Mattapan Trolley') {
         currentStops = mattapanTrolleyStops;
@@ -267,6 +257,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                   builder: (context) => StopSheet.fromStopId(
                                     trainstop.stopId,
                                     {trainstop.routeId},
+                                  ),
+                                );
+                              },
+                              onLongPress: () {
+                                FavoritesService.addFavorite(trainstop.name, trainstop.color, selectedLine, trainstop.routeId, trainstop.stopId); // TODO FIGURE OUT HOW TO GIVE FEEDBACK IT WAS ADDED
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${trainstop.name} added to favorites!'),
                                   ),
                                 );
                               },

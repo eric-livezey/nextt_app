@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nextt_app/t_stops.dart';
-//import '../t_stops.dart';
 import '../device-storage-services.dart';
+import '../stop_sheet.dart';
+
+
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -111,7 +113,7 @@ class _FavoriteScreenState extends State<FavoritesPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Add train stops to your favorites\nfrom the Home page',
+                              'Press and hold on a stop to favorite it!',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
@@ -129,6 +131,9 @@ class _FavoriteScreenState extends State<FavoritesPage> {
                           final trainstop = _favorites[index];                         
                           final stopName = trainstop.split(",")[1];
                           final lineName = trainstop.split(",")[2];
+                          final routeId = trainstop.split(",")[3];
+                          final stopId = trainstop.split(",")[4];
+
                           
                           return Card(
                             margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -181,71 +186,52 @@ class _FavoriteScreenState extends State<FavoritesPage> {
                                 color: Color(0xFF666666),
                               ),
                               onTap: () {
-                                // TRAIN STOP DIALOG BOX
+                                showBottomSheet(
+                                  context: context,
+                                  constraints: BoxConstraints.loose(
+                                    Size(
+                                      MediaQuery.of(context).size.width,
+                                      MediaQuery.of(context).size.height / 2.0,
+                                    ),
+                                  ),
+                                  builder: (context) => StopSheet.fromStopId(
+                                    stopId,
+                                    {routeId},
+                                  ),
+                                );
+                              },
+                              onLongPress: () {
                                 showDialog(
                                   context: context,
-                                  builder: (context) => Dialog(
-                                    child: Container(
-                                      // Ideally it's reactive to screen size
-                                      width: MediaQuery.of(context).size.width * 0.8,
-                                      height: MediaQuery.of(context).size.height * 0.6,
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 400,
-                                        maxHeight: 500,
-                                        minWidth: 250,
-                                        minHeight: 300,
-                                      ),
-                                      child: AlertDialog(
-                                        title: Center(
-                                          child: Text(
-                                            trainstop.split(",")[1],
-                                            style: TextStyle(
-                                              fontSize: 20, 
-                                              fontWeight: FontWeight.bold,                                               
-                                              ),
-                                            ),
-                                          ),
-                                        
-                                        content: Column(
-                                          children: [
-                                            SizedBox(height: 16),
-                                            // API BACK END CONNECTION BELONGS HERE
-                                            const Text('Next Trains:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                            const Text('Medford Tufts: 5 min'),
-                                            const Text('Heath Street: 3 min'),
-                                            SizedBox(height: 16),
-                                            const Text('Alerts:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                            const Text('No current alerts'),
-                                          ],
+                                  builder: (context) => AlertDialog(
+                                    title: Center(child: const Text('Remove Favorite')),
+                                    content: const Text('Are you sure you want to remove this favorite?'),
+                                    actionsAlignment: MainAxisAlignment.center,
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text(
+                                          'Cancel',
+                                          style: TextStyle(color: Colors.black),
                                         ),
-                                        
-                                        actions: [
-                                          Center(
-                                            child: Column(
-                                              children: [
-                                                TextButton(
-                                                  onPressed: () async {
-                                                    await FavoritesService.removeFavorite(trainstop);
-                                                    await loadFavorites(); // reloads the list and calls setState
-                                                    Navigator.pop(context); // closes the dialog box
-                                                  },        
-                                                  style: TextButton.styleFrom(
-                                                    foregroundColor: Colors.red,
-                                                  ),                                          
-                                                  child: const Text('Remove Favorite'),
-                                                                
-                                                ),
-                                                SizedBox(height: 5),
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(context),
-                                                  child: const Text('Close'),
-                                                ),
-                                              ],
-                                            ),
-                                          ),                                          
-                                        ],
                                       ),
-                                    ),
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.pop(context); // Close dialog first
+                                          await FavoritesService.removeFavorite(trainstop);
+                                          await loadFavorites(); // Reload the list
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Removed $stopName from favorites!'),
+                                            ),
+                                          );
+                                        },
+                                        child: const Text(
+                                          'Remove',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 );
                               },
