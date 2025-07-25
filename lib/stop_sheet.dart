@@ -129,7 +129,7 @@ class VehicleListTile extends StatelessWidget {
     this.occupancyStatus,
     this.stopStatus,
     this.delay,
-    required this.destination,
+    this.destination,
   });
 
   final Icon icon;
@@ -138,7 +138,7 @@ class VehicleListTile extends StatelessWidget {
   final OccupancyStatus? occupancyStatus;
   final VehicleStopStatus? stopStatus;
   final int? delay;
-  final String destination;
+  final String? destination;
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +188,7 @@ class VehicleListTile extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [Text(destination)],
+            children: [Text(destination ?? '')],
           ),
         ],
       ),
@@ -211,7 +211,7 @@ class StopSheet extends StatefulWidget {
   final ResourceStream stream;
   final bool isTempStream;
 
-  factory StopSheet.fromStopId(String stopId, Set<String> routeIds) {
+  static fromStopId(String stopId, Set<String> routeIds) {
     final ResourceStream stream = ResourceStream(
       ResourceFilter(
         types: const {
@@ -241,29 +241,26 @@ class StopSheet extends StatefulWidget {
 class _StopSheetState extends State<StopSheet> {
   _StopSheetState();
 
-  late Set<String> _stopIds;
+  Set<String> _stopIds = {};
 
   /// store which vehicles are being tracked to avoid duplicates
   final Set<String> _vehicleIds = {};
   final List<VehiclePrediction> _predictions = [];
-  Stop get _stop => widget.stream.stops[widget.stopId]!;
+  Stop? _stop;
 
   @override
   void initState() {
     super.initState();
-    Set<String> stopIds =
-        [
-          widget.stopId,
-        ].followedBy(_stop.children.map((child) => child.id)).toSet();
-    widget.stream
-      ..filter.stopIds.addAll(stopIds)
-      ..commit();
-    _stopIds = stopIds;
     // set initial resources
+    _onStopReset(widget.stream.stops.values);
     _onScheduleReset(widget.stream.schedules.values);
     _onPredictionReset(widget.stream.predictions.values);
     // add listeners
     widget.stream.listen(
+      onStopReset: _onStopReset,
+      onStopAdd: _onStopAdd,
+      onStopUpdate: _onStopUpdate,
+      onStopRemove: _onStopRemove,
       onPredictionReset: _onPredictionReset,
       onPredictionAdd: _onPredictionAdd,
       onPredictionUpdate: _onPredictionUpdate,
@@ -279,91 +276,151 @@ class _StopSheetState extends State<StopSheet> {
   void dispose() {
     super.dispose();
     if (widget.isTempStream) {
+      // close stream
       widget.stream.close();
     } else {
+      // stop listening and remove filters
       widget.stream
         ..removeListeners(
           types: [ResourceType.schedule, ResourceType.prediction],
         )
-        ..filter.stopIds.removeAll(
-          [widget.stopId].followedBy(_stop.children.map((child) => child.id)),
-        )
+        ..filter.stopIds.removeAll(_stopIds)
         ..commit();
     }
   }
 
+  void _onStopReset(Iterable<Stop> stops) {
+    _onStopAdd(stops);
+  }
+
+  void _onStopAdd(Iterable<Stop> stops) {
+    _onStopUpdate(stops);
+  }
+
+  void _onStopUpdate(Iterable<Stop> stops) {
+    if (mounted) {
+      final Stop? stop =
+          (() {
+            for (var stop in stops) {
+              if (stop.id == widget.stopId) return stop;
+            }
+            return null;
+          })();
+      if (stop != null) {
+        setState(() {
+          _stop = stop;
+          final Set<String> stopIds =
+              [
+                widget.stopId,
+              ].followedBy(stop.children.map((child) => child.id)).toSet();
+          widget.stream
+            ..filter.stopIds.addAll(stopIds)
+            ..commit();
+          _stopIds = stopIds;
+        });
+      }
+    }
+  }
+
+  void _onStopRemove(Iterable<String> stopIds) {
+    if (mounted) {
+      if (stopIds.any((stopId) => stopId == widget.stopId)) {
+        setState(() {
+          _stop = null;
+          _stopIds = const {};
+        });
+      }
+    }
+  }
+
   void _onScheduleReset(Iterable<Schedule> schedules) {
-    _onScheduleAdd(schedules);
+    if (mounted) {
+      _onScheduleAdd(schedules);
+    }
   }
 
   void _onScheduleAdd(Iterable<Schedule> schedules) {
-    for (final Schedule schedule in schedules) {
-      final int index = _predictions.indexWhere(
-        (prediction) => prediction.scheduleId == schedule.id,
-      );
-      final VehiclePrediction? prediction =
-          index >= 0 ? _predictions.elementAtOrNull(index) : null;
-      if (prediction != null) {
-        prediction.delay = schedule.arrivalTime?.difference(
-          prediction.arrivalTime,
+    if (mounted) {
+      for (final Schedule schedule in schedules) {
+        final int index = _predictions.indexWhere(
+          (prediction) => prediction.scheduleId == schedule.id,
         );
+        final VehiclePrediction? prediction =
+            index >= 0 ? _predictions.elementAtOrNull(index) : null;
+        if (prediction != null) {
+          prediction.delay = schedule.arrivalTime?.difference(
+            prediction.arrivalTime,
+          );
+        }
       }
     }
   }
 
   void _onScheduleUpdate(Iterable<Schedule> schedules) {
-    _onScheduleAdd(schedules);
+    if (mounted) {
+      _onScheduleAdd(schedules);
+    }
   }
 
   void _onScheduleRemove(Iterable<String> scheduleIds) {
-    final Set<String> scheduleIdSet = scheduleIds.toSet();
-    for (final VehiclePrediction prediction in _predictions.where(
-      (prediction) => scheduleIdSet.contains(prediction.scheduleId),
-    )) {
-      prediction.delay = null;
+    if (mounted) {
+      final Set<String> scheduleIdSet = scheduleIds.toSet();
+      for (final VehiclePrediction prediction in _predictions.where(
+        (prediction) => scheduleIdSet.contains(prediction.scheduleId),
+      )) {
+        prediction.delay = null;
+      }
     }
   }
 
   void _onPredictionReset(Iterable<Prediction> predictions) {
-    _predictions.clear();
-    _onPredictionAdd(predictions);
+    if (mounted) {
+      _predictions.clear();
+      _onPredictionAdd(predictions);
+    }
   }
 
   void _onPredictionAdd(Iterable<Prediction> predictions) {
-    setState(() {
-      for (final Prediction prediction in predictions.where(
-        (prediction) => _stopIds.contains(prediction.stopId),
-      )) {
-        _insertPredictionInOrder(prediction);
-      }
-    });
-  }
-
-  void _onPredictionUpdate(List<Prediction> predictions) {
-    for (final Prediction prediction in predictions) {
-      _onPredictionRemove([prediction.id]);
+    if (mounted) {
       setState(() {
-        _insertPredictionInOrder(prediction);
+        for (final Prediction prediction in predictions.where(
+          (prediction) => _stopIds.contains(prediction.stopId),
+        )) {
+          _insertPredictionInOrder(prediction);
+        }
       });
     }
   }
 
-  void _onPredictionRemove(Iterable<String> predictionIds) {
-    setState(() {
-      final Set<String> predictionIdSet = predictionIds.toSet();
-      int index = 0;
-      while (index >= 0) {
-        index = _predictions.indexWhere(
-          (prediction) => predictionIdSet.contains(prediction.predictionId),
-          index,
-        );
-        if (index >= 0) {
-          final VehiclePrediction prediction = _predictions[index];
-          _predictions.removeAt(index);
-          _vehicleIds.remove(prediction.vehicleId);
-        }
+  void _onPredictionUpdate(List<Prediction> predictions) {
+    if (mounted) {
+      for (final Prediction prediction in predictions) {
+        _onPredictionRemove([prediction.id]);
+        setState(() {
+          _insertPredictionInOrder(prediction);
+        });
       }
-    });
+    }
+  }
+
+  void _onPredictionRemove(Iterable<String> predictionIds) {
+    if (mounted) {
+      setState(() {
+        final Set<String> predictionIdSet = predictionIds.toSet();
+        int index = 0;
+        while (index >= 0) {
+          index = _predictions.indexWhere(
+            (prediction) => predictionIdSet.contains(prediction.predictionId),
+            index,
+          );
+          if (index >= 0) {
+            final VehiclePrediction prediction = _predictions[index];
+            _predictions.removeAt(index);
+            _vehicleIds.remove(prediction.vehicleId);
+          }
+        }
+      });
+    }
   }
 
   /// insert prediction in order
@@ -373,7 +430,7 @@ class _StopSheetState extends State<StopSheet> {
             ? widget.stream.vehicles[prediction.vehicleId!]
             : null;
     final Route? route =
-        _stop.routeIds.contains(prediction.routeId)
+        _stop?.routeIds.contains(prediction.routeId) ?? false
             ? widget.stream.routes[prediction.routeId]
             : null;
     final Schedule? schedule =
@@ -428,7 +485,7 @@ class _StopSheetState extends State<StopSheet> {
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
-                _stop.name,
+                _stop?.name ?? '',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -480,8 +537,8 @@ class _StopSheetState extends State<StopSheet> {
                                                       widget
                                                           .stream
                                                           .routes[prediction
-                                                              .routeId]!
-                                                          .directionDestinations![prediction
+                                                              .routeId]
+                                                          ?.directionDestinations?[prediction
                                                           .directionId],
                                                 );
                                               })
