@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../t_stops.dart';
-import '../device-storage-services.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+
+import '../device-storage-services.dart';
 import '../stop_sheet.dart';
+import '../t_stops.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -261,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 );
                               },
                               onLongPress: () {
-                                FavoritesService.addFavorite(trainstop.name, trainstop.color, selectedLine, trainstop.routeId, trainstop.stopId); // TODO FIGURE OUT HOW TO GIVE FEEDBACK IT WAS ADDED
+                                FavoritesService.addFavorite(trainstop.name, trainstop.color, selectedLine, trainstop.routeId, trainstop.stopId);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('${trainstop.name} added to favorites!'),

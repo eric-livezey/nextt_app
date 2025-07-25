@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nextt_app/t_stops.dart';
+
 import '../device-storage-services.dart';
 import '../stop_sheet.dart';
-
-
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
