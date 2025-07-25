@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../t_stops.dart';
 import '../device-storage-services.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import '../stop_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,22 +13,29 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Color lineColor = redLineColor;
-  late String selectedLine = 'Red Mattapan Trolley';
-  late List<TrainStop> currentStops = redLineAshmontStops;
+  late String selectedLine = 'Red Braintree';
+  late List<TrainStop> currentStops = redLineStops;
 
   // Dropdown items
   static List<DropdownMenuItem<String>> dropdownItems = [
     DropdownMenuItem(
-      value: 'Red Mattapan Trolley',
+      value: 'Red Braintree',
       child: _DropdownItemWithColor(
-        text: 'Red Line - Mattapan Trolley',
+        text: 'Red Line - Braintree',
         color: redLineColor,
       ),
     ),
     DropdownMenuItem(
-      value: 'Red Braintree',
+      value: 'Red Ashmont',
       child: _DropdownItemWithColor(
-        text: 'Red Line - Braintree',
+        text: 'Red Line - Ashmont',
+        color: redLineColor,
+      ),
+    ),
+    DropdownMenuItem(
+      value: 'Mattapan Trolley',
+      child: _DropdownItemWithColor(
+        text: 'Mattapan Trolley',
         color: redLineColor,
       ),
     ),
@@ -107,19 +115,26 @@ class _HomeScreenState extends State<HomeScreen> {
         lineColor = greenLineColor;
       }
       // ORANGE
-        else if (value == 'Orange') {
+      else if (value == 'Orange') {
         currentStops = orangeStops;
         lineColor = orangeLineColor;
+      }
       // BLUE
-      } else if (value == 'Blue') {
+      else if (value == 'Blue') {
         currentStops = blueStops;
         lineColor = blueLineColor;
+      }
       // RED
-      } else if (value == 'Red Mattapan Trolley') {
-        currentStops = redLineAshmontStops;
+      else if (value == 'Red Braintree') {
+        currentStops = redLineStops;
         lineColor = redLineColor;
-      } else if (value == 'Red Braintree') {
-        currentStops = redLineBraintreeStops;
+      } else if (value == 'Red Ashmont') {
+        currentStops = redLineAshmontBranch;
+        lineColor = redLineColor;
+      }
+      // MATTAPAN TROLLEY
+      else if (value == 'Mattapan Trolley') {
+        currentStops = mattapanTrolleyStops;
         lineColor = redLineColor;
       }
     });
@@ -128,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(176, 255, 255, 255), 
+      backgroundColor: const Color.fromARGB(176, 255, 255, 255),
       body: Column(
         children: [
           // Header area (Dropdown for line selection)
@@ -168,18 +183,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: lineColor.withValues(alpha: .3),
                         width: 2,
                       ),
-                      
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 4.0),
                       child: Row(
-                        children: [                      
+                        children: [
                           // --- DROP DOWN MENNU ---
                           Expanded(
                             child: DropdownButton2<String>(
                               value: selectedLine,
                               isExpanded: true,
-                              // removes underline by replacing it with an empty undefined box
+                              // this removes underline by replacing it with an empty undefined box
                               underline: const SizedBox(),
                               style: const TextStyle(
                                 color: Color(0xFF1a1a1a),
@@ -198,8 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               dropdownStyleData: DropdownStyleData(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12.0), // Match container radius
-                                  
+                                  borderRadius: BorderRadius.circular(12.0),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withValues(alpha: 0.4),
@@ -209,11 +223,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ],
                                 ),
                                 elevation: 4,
-                                offset: const Offset(0, 8), // Slightly below the button
+                                offset: const Offset(0, 8),
                               ),
                               items: dropdownItems,
                               onChanged: _onLineChanged,
-
                             ),
                           ),
                         ],
@@ -231,106 +244,57 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 children: [
                   // Map function to build train stop widgets
-                  ...currentStops.map((trainstop) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Column(
-                      children: [
-                        Material(
-                          color: Colors.transparent,
-                          shape: const CircleBorder(),
-                          // Wrapped InkWell with Material to provide ripple effect
-                          child: InkWell(
-                            onTap: () {
-                              // TRAIN STOP DIALOG BOX
-                              showDialog(
-                                context: context,
-                                builder: (context) => Dialog(
-                                  child: Container(
-                                    // Ideally it's reactive to screen size
-                                    width: MediaQuery.of(context).size.width * 0.8,
-                                    height: MediaQuery.of(context).size.height * 0.6,
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 400,
-                                      maxHeight: 500,
-                                      minWidth: 250,
-                                      minHeight: 300,
-                                    ),
-                                    child: AlertDialog(
-                                      title: Center(
-                                        child: Text(
-                                          trainstop.name,
-                                          style: const TextStyle(
-                                            fontSize: 20, 
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      content: Column(
-                                        children: [
-                                          const SizedBox(height: 16),
-                                          //TODO API BACK END CONNECTION BELONGS HERE
-                                          const Text('Next Trains:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                          const Text('Medford Tufts: 5 min'),
-                                          const Text('Heath Street: 3 min'),
-                                          const SizedBox(height: 16),
-                                          const Text('Alerts:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                          const Text('No current alerts'),
-                                        ],
-                                      ),
-                                      actions: [
-                                        Center(
-                                          child: Column(
-                                            children: [
-                                              TextButton(
-                                                onPressed: () {
-                                                  FavoritesService.addFavorite(trainstop.name, trainstop.color, selectedLine); // TODO FIGURE OUT HOW TO GIVE FEEDBACK IT WAS ADDED
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('${trainstop.name} added to favorites!'),
-                                                    ),
-                                                  );
-                                                },
-                                                style: TextButton.styleFrom(
-                                                    foregroundColor: Colors.green,
-                                                  ),     
-                                                child: const Text('Add Favorite'),
-                                              ),
-                                              const SizedBox(height: 5),
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(context),
-                                                child: const Text('Close'),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                  ...currentStops.map(
+                    (trainstop) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Column(
+                        children: [
+                          Material(
+                            color: Colors.transparent,
+                            shape: const CircleBorder(),
+                            // Wrapped InkWell with Material to provide ripple effect
+                            child: InkWell(
+                              onTap: () {
+                                // Open StopSheet instead of dialog
+                                showBottomSheet(
+                                  context: context,
+                                  constraints: BoxConstraints.loose(
+                                    Size(
+                                      MediaQuery.of(context).size.width,
+                                      MediaQuery.of(context).size.height / 2.0,
                                     ),
                                   ),
-                                ),
-                              );
-                            },
-                            customBorder: const CircleBorder(),
-                            hoverColor: const Color.fromRGBO(0, 0, 0, 0.3),
-                            child: Column(
-                              children: [
-                                Ink(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: lineColor,
-                                    shape: BoxShape.circle,
+                                  builder: (context) => StopSheet.fromStopId(
+                                    trainstop.stopId,
+                                    {trainstop.routeId},
                                   ),
-                                  child: const Icon(Icons.train, color: Colors.white),
-                                ),                
-                              ],
+                                );
+                              },
+                              customBorder: const CircleBorder(),
+                              hoverColor: const Color.fromRGBO(0, 0, 0, 0.3),
+                              child: Column(
+                                children: [
+                                  Ink(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color: lineColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.train,
+                                        color: Colors.white),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(trainstop.name, style: const TextStyle(fontSize: 16)),
-                      ],
+                          const SizedBox(height: 10),
+                          Text(trainstop.name,
+                              style: const TextStyle(fontSize: 16)),
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),
