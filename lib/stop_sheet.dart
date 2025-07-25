@@ -202,36 +202,15 @@ class StopSheet extends StatefulWidget {
     super.key,
     required this.stopId,
     required this.routeIds,
-    required this.stream,
-    this.isTempStream = false,
+    this.stream,
   });
 
   final String stopId;
   final Set<String> routeIds;
-  final ResourceStream stream;
-  final bool isTempStream;
+  final ResourceStream? stream;
 
   static fromStopId(String stopId, Set<String> routeIds) {
-    final ResourceStream stream = ResourceStream(
-      ResourceFilter(
-        types: const {
-          ResourceType.route,
-          ResourceType.vehicle,
-          ResourceType.stop,
-          ResourceType.schedule,
-          ResourceType.prediction,
-          ResourceType.alert,
-        },
-        routeIds: routeIds,
-        stopIds: {stopId},
-      ),
-    )..connect();
-    return StopSheet(
-      stopId: stopId,
-      routeIds: routeIds,
-      stream: stream,
-      isTempStream: true,
-    );
+    return StopSheet(stopId: stopId, routeIds: routeIds);
   }
 
   @override
@@ -241,6 +220,8 @@ class StopSheet extends StatefulWidget {
 class _StopSheetState extends State<StopSheet> {
   _StopSheetState();
 
+  late ResourceStream _stream;
+  late bool _isTempStream = false;
   Set<String> _stopIds = {};
 
   /// store which vehicles are being tracked to avoid duplicates
@@ -251,12 +232,32 @@ class _StopSheetState extends State<StopSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.stream != null) {
+      _stream = widget.stream!;
+    } else {
+      _stream = ResourceStream(
+        ResourceFilter(
+          types: const {
+            ResourceType.route,
+            ResourceType.vehicle,
+            ResourceType.stop,
+            ResourceType.schedule,
+            ResourceType.prediction,
+            ResourceType.alert,
+          },
+          routeIds: widget.routeIds,
+          stopIds: {widget.stopId},
+        ),
+      )..connect();
+      _isTempStream = true;
+    }
+
     // set initial resources
-    _onStopReset(widget.stream.stops.values);
-    _onScheduleReset(widget.stream.schedules.values);
-    _onPredictionReset(widget.stream.predictions.values);
+    _onStopReset(_stream.stops.values);
+    _onScheduleReset(_stream.schedules.values);
+    _onPredictionReset(_stream.predictions.values);
     // add listeners
-    widget.stream.listen(
+    _stream.listen(
       onStopReset: _onStopReset,
       onStopAdd: _onStopAdd,
       onStopUpdate: _onStopUpdate,
@@ -275,12 +276,12 @@ class _StopSheetState extends State<StopSheet> {
   @override
   void dispose() {
     super.dispose();
-    if (widget.isTempStream) {
+    if (_isTempStream) {
       // close stream
-      widget.stream.close();
+      _stream.close();
     } else {
       // stop listening and remove filters
-      widget.stream
+      _stream
         ..removeListeners(
           types: [ResourceType.schedule, ResourceType.prediction],
         )
@@ -313,7 +314,7 @@ class _StopSheetState extends State<StopSheet> {
               [
                 widget.stopId,
               ].followedBy(stop.children.map((child) => child.id)).toSet();
-          widget.stream
+          _stream
             ..filter.stopIds.addAll(stopIds)
             ..commit();
           _stopIds = stopIds;
@@ -427,15 +428,15 @@ class _StopSheetState extends State<StopSheet> {
   void _insertPredictionInOrder(Prediction prediction) {
     final Vehicle? vehicle =
         prediction.vehicleId != null
-            ? widget.stream.vehicles[prediction.vehicleId!]
+            ? _stream.vehicles[prediction.vehicleId!]
             : null;
     final Route? route =
         _stop?.routeIds.contains(prediction.routeId) ?? false
-            ? widget.stream.routes[prediction.routeId]
+            ? _stream.routes[prediction.routeId]
             : null;
     final Schedule? schedule =
         prediction.scheduleId != null
-            ? widget.stream.schedules[prediction.scheduleId]
+            ? _stream.schedules[prediction.scheduleId]
             : null;
     // if the prediction is not missing important fields or related resources
     if (vehicle != null &&
@@ -534,8 +535,7 @@ class _StopSheetState extends State<StopSheet> {
                                                           ?.inMinutes,
                                                   stopStatus: prediction.status,
                                                   destination:
-                                                      widget
-                                                          .stream
+                                                      _stream
                                                           .routes[prediction
                                                               .routeId]
                                                           ?.directionDestinations?[prediction
