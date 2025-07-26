@@ -89,11 +89,7 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
 }
 
 class AlertBox extends StatelessWidget {
-  const AlertBox({
-    super.key,
-    required this.shortText,
-    required this.longText,
-  });
+  const AlertBox({super.key, required this.shortText, required this.longText});
   final String shortText;
   final String longText;
 
@@ -306,6 +302,7 @@ class _StopSheetState extends State<StopSheet> {
   final List<VehiclePrediction> _predictions = [];
   final Map<String, Alert> _alerts = {};
   Stop? _stop;
+  bool _isFavorited = false;
 
   @override
   void initState() {
@@ -588,9 +585,43 @@ class _StopSheetState extends State<StopSheet> {
               ),
             ),
             // Stop Name
-            Text(
-              _stop?.name ?? '',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  _stop?.name ?? '',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 40),
+                      child: Text(
+                        _stop?.name ?? '',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.transparent,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _isFavorited = !_isFavorited;
+                        });
+                      },
+                      icon: Icon(
+                        _isFavorited ? Icons.favorite : Icons.favorite_outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
