@@ -80,6 +80,7 @@ class _DurationTileState extends State<DurationTile> {
     if (duration == Duration.zero) {
       // stop timer
       timer.cancel();
+      duration = Duration(microseconds: 1);
     } else if (widget.includeSeconds &&
         _tickDuration == _oneMinute &&
         duration.inSeconds <= Duration.secondsPerMinute) {
@@ -104,13 +105,19 @@ class _DurationTileState extends State<DurationTile> {
     final int seconds = duration.inSeconds;
     final int minutes = duration.inMinutes;
     final bool isNow = duration == Duration.zero;
-    final bool isInSeconds = widget.includeSeconds && seconds < Duration.secondsPerMinute;
+    final bool isInSeconds =
+        widget.includeSeconds && seconds < Duration.secondsPerMinute;
     final bool isInMinutes = minutes < Duration.minutesPerHour;
     final Text title = Text(
       isNow
           ? 'Now'
           : isInMinutes
-          ? (isInSeconds ? seconds : minutes < 1 ? '<1' : minutes).toString()
+          ? (isInSeconds
+                  ? seconds
+                  : minutes < 1
+                  ? '<1'
+                  : minutes)
+              .toString()
           : _endTime.format(context),
       style: const TextStyle(color: Colors.black, fontSize: 16.0),
     );

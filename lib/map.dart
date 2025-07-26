@@ -258,16 +258,26 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
               ),
             ),
             builder:
-                (context) => StopSheet(
-                  stopId: markerId.value,
-                  routeIds: stop.routeIds,
-                  stream: _stream,
+                (context) => StopSheet.fromStopId(
+                  markerId.value,
+                  stop.routeIds.intersection(
+                    _stream.filter.routeIds ??
+                        _routes.values
+                            .where(
+                              (route) => _stream.filter.routeTypes!.contains(
+                                route.route.type,
+                              ),
+                            )
+                            .map((route) => route.route.id)
+                            .toSet(),
+                  ),
                 ),
           );
-          // _controller.animateCamera(
-          //   CameraUpdateNewLatLngZoom(LatLng(stop.latitude - 0.015, stop.longitude), 14.0),
-          // );
+          _controller.animateCamera(
+            CameraUpdateNewLatLngZoom(LatLng(stop.latitude - 0.015, stop.longitude), 14.0),
+          );
         },
+        consumeTapEvents: false
       ),
     );
     setState(() {

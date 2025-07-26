@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Route;
 import 'package:nextt_app/api.dart'
     show
+        Alert,
         OccupancyStatus,
         Prediction,
         Route,
@@ -11,6 +12,9 @@ import 'package:nextt_app/api.dart'
 import 'package:nextt_app/duration_tile.dart' show DurationTile;
 import 'package:nextt_app/stream.dart'
     show ResourceFilter, ResourceStream, ResourceType;
+
+/// IDs of routes which are able to be favorited.
+const Set<String> favoritableRoutes = {};
 
 String _resolveStopStatusText(VehicleStopStatus status) {
   return switch (status) {
@@ -84,6 +88,69 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
   }
 }
 
+class AlertBox extends StatelessWidget {
+  const AlertBox({
+    super.key,
+    required this.shortText,
+    required this.longText,
+  });
+  final String shortText;
+  final String longText;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder:
+              (_) => AlertDialog(
+                content: Text(longText),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                ],
+                scrollable: true,
+              ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          border: Border.all(color: Colors.orange, width: 1.5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.all(6),
+        child: Row(
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 32,
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    shortText,
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A badge which represents a route.
 class RouteBadge extends StatelessWidget {
   const RouteBadge({
@@ -129,6 +196,7 @@ class VehicleListTile extends StatelessWidget {
     this.occupancyStatus,
     this.stopStatus,
     this.delay,
+    this.direction,
     this.destination,
   });
 
@@ -138,6 +206,7 @@ class VehicleListTile extends StatelessWidget {
   final OccupancyStatus? occupancyStatus;
   final VehicleStopStatus? stopStatus;
   final int? delay;
+  final String? direction;
   final String? destination;
 
   @override
@@ -188,7 +257,15 @@ class VehicleListTile extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [Text(destination ?? '')],
+            children: [
+              Expanded(
+                child: Text(
+                  '${direction ?? ''}${direction != null && destination != null ? ' • ' : ' '}${destination ?? ''}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -227,6 +304,7 @@ class _StopSheetState extends State<StopSheet> {
   /// store which vehicles are being tracked to avoid duplicates
   final Set<String> _vehicleIds = {};
   final List<VehiclePrediction> _predictions = [];
+  final Map<String, Alert> _alerts = {};
   Stop? _stop;
 
   @override
@@ -251,7 +329,6 @@ class _StopSheetState extends State<StopSheet> {
       )..connect();
       _isTempStream = true;
     }
-
     // set initial resources
     _onStopReset(_stream.stops.values);
     _onScheduleReset(_stream.schedules.values);
@@ -270,6 +347,10 @@ class _StopSheetState extends State<StopSheet> {
       onScheduleAdd: _onScheduleAdd,
       onScheduleUpdate: _onScheduleUpdate,
       onScheduleRemove: _onScheduleRemove,
+      onAlertReset: _onAlertReset,
+      onAlertAdd: _onAlertAdd,
+      onAlertUpdate: _onAlertUpdate,
+      onAlertRemove: _onAlertRemove,
     );
   }
 
@@ -334,94 +415,109 @@ class _StopSheetState extends State<StopSheet> {
     }
   }
 
+  _onAlertReset(Iterable<Alert> alerts) {
+    _alerts.clear();
+    _onAlertAdd(alerts);
+  }
+
+  _onAlertAdd(Iterable<Alert> alerts) {
+    setState(() {
+      for (final Alert alert in alerts.where(
+        (alert) => alert.informedEntity.any(
+          (entity) => _stopIds.contains(entity.stop),
+        ),
+      )) {
+        _alerts[alert.id] = alert;
+      }
+    });
+  }
+
+  _onAlertUpdate(Iterable<Alert> alerts) {
+    _onAlertAdd(alerts);
+  }
+
+  _onAlertRemove(Iterable<String> alertIds) {
+    setState(() {
+      for (final String alertId in alertIds) {
+        if (_alerts.containsKey(alertId)) {
+          _alerts.remove(alertId);
+        }
+      }
+    });
+  }
+
   void _onScheduleReset(Iterable<Schedule> schedules) {
-    if (mounted) {
-      _onScheduleAdd(schedules);
-    }
+    _onScheduleAdd(schedules);
   }
 
   void _onScheduleAdd(Iterable<Schedule> schedules) {
-    if (mounted) {
-      for (final Schedule schedule in schedules) {
-        final int index = _predictions.indexWhere(
-          (prediction) => prediction.scheduleId == schedule.id,
+    for (final Schedule schedule in schedules) {
+      final int index = _predictions.indexWhere(
+        (prediction) => prediction.scheduleId == schedule.id,
+      );
+      final VehiclePrediction? prediction =
+          index >= 0 ? _predictions.elementAtOrNull(index) : null;
+      if (prediction != null) {
+        prediction.delay = schedule.arrivalTime?.difference(
+          prediction.arrivalTime,
         );
-        final VehiclePrediction? prediction =
-            index >= 0 ? _predictions.elementAtOrNull(index) : null;
-        if (prediction != null) {
-          prediction.delay = schedule.arrivalTime?.difference(
-            prediction.arrivalTime,
-          );
-        }
       }
     }
   }
 
   void _onScheduleUpdate(Iterable<Schedule> schedules) {
-    if (mounted) {
-      _onScheduleAdd(schedules);
-    }
+    _onScheduleAdd(schedules);
   }
 
   void _onScheduleRemove(Iterable<String> scheduleIds) {
-    if (mounted) {
-      final Set<String> scheduleIdSet = scheduleIds.toSet();
-      for (final VehiclePrediction prediction in _predictions.where(
-        (prediction) => scheduleIdSet.contains(prediction.scheduleId),
-      )) {
-        prediction.delay = null;
-      }
+    final Set<String> scheduleIdSet = scheduleIds.toSet();
+    for (final VehiclePrediction prediction in _predictions.where(
+      (prediction) => scheduleIdSet.contains(prediction.scheduleId),
+    )) {
+      prediction.delay = null;
     }
   }
 
   void _onPredictionReset(Iterable<Prediction> predictions) {
-    if (mounted) {
-      _predictions.clear();
-      _onPredictionAdd(predictions);
-    }
+    _predictions.clear();
+    _onPredictionAdd(predictions);
   }
 
   void _onPredictionAdd(Iterable<Prediction> predictions) {
-    if (mounted) {
-      setState(() {
-        for (final Prediction prediction in predictions.where(
-          (prediction) => _stopIds.contains(prediction.stopId),
-        )) {
-          _insertPredictionInOrder(prediction);
-        }
-      });
-    }
+    setState(() {
+      for (final Prediction prediction in predictions.where(
+        (prediction) => _stopIds.contains(prediction.stopId),
+      )) {
+        _insertPredictionInOrder(prediction);
+      }
+    });
   }
 
   void _onPredictionUpdate(List<Prediction> predictions) {
-    if (mounted) {
-      for (final Prediction prediction in predictions) {
-        _onPredictionRemove([prediction.id]);
-        setState(() {
-          _insertPredictionInOrder(prediction);
-        });
-      }
+    for (final Prediction prediction in predictions) {
+      _onPredictionRemove([prediction.id]);
+      setState(() {
+        _insertPredictionInOrder(prediction);
+      });
     }
   }
 
   void _onPredictionRemove(Iterable<String> predictionIds) {
-    if (mounted) {
-      setState(() {
-        final Set<String> predictionIdSet = predictionIds.toSet();
-        int index = 0;
-        while (index >= 0) {
-          index = _predictions.indexWhere(
-            (prediction) => predictionIdSet.contains(prediction.predictionId),
-            index,
-          );
-          if (index >= 0) {
-            final VehiclePrediction prediction = _predictions[index];
-            _predictions.removeAt(index);
-            _vehicleIds.remove(prediction.vehicleId);
-          }
+    setState(() {
+      final Set<String> predictionIdSet = predictionIds.toSet();
+      int index = 0;
+      while (index >= 0) {
+        index = _predictions.indexWhere(
+          (prediction) => predictionIdSet.contains(prediction.predictionId),
+          index,
+        );
+        if (index >= 0) {
+          final VehiclePrediction prediction = _predictions[index];
+          _predictions.removeAt(index);
+          _vehicleIds.remove(prediction.vehicleId);
         }
-      });
-    }
+      }
+    });
   }
 
   /// insert prediction in order
@@ -466,10 +562,19 @@ class _StopSheetState extends State<StopSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final Alert? alert = _alerts.values.firstOrNull;
+    final ThemeData theme = Theme.of(context);
     return SizedBox.expand(
       child: Container(
-        color: Theme.of(context).cardColor,
-        padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          border: const Border(top: BorderSide(width: 0.1)),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(10),
+            topRight: Radius.circular(10),
+          ),
+        ),
+        padding: const EdgeInsets.only(top: 16),
         child: Column(
           children: [
             // Drag Handle
@@ -483,73 +588,55 @@ class _StopSheetState extends State<StopSheet> {
               ),
             ),
             // Stop Name
+            Text(
+              _stop?.name ?? '',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                _stop?.name ?? '',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child:
+                  alert != null
+                      ? AlertBox(
+                        shortText: alert.header!,
+                        longText: alert.description!,
+                      )
+                      : null,
             ),
             // Tabs
             Expanded(
-              child: DefaultTabController(
-                length: 2,
-                child: Column(
-                  children: <Widget>[
-                    // Tab Bar
-                    TabBar(
-                      tabs:
-                          const {'Inbound', 'Outbound'}
-                              .map((directionName) => Tab(text: directionName))
-                              .toList(),
-                    ),
-                    // Tab Content
-                    Expanded(
-                      child: TabBarView(
-                        children:
-                            const {0, 1}
-                                .map(
-                                  (directionId) => SizedBox(
-                                    height: 150,
-                                    child: ListView(
-                                      children:
-                                          _predictions
-                                              .where(
-                                                (prediction) =>
-                                                    prediction.directionId ==
-                                                    directionId,
-                                              )
-                                              .map((prediction) {
-                                                return VehicleListTile(
-                                                  icon: Icon(prediction.icon),
-                                                  arrivalTime:
-                                                      prediction.arrivalTime,
-                                                  routeBadge:
-                                                      prediction.routeBadge,
-                                                  delay:
-                                                      prediction
-                                                          .delay
-                                                          ?.inMinutes,
-                                                  stopStatus: prediction.status,
-                                                  destination:
-                                                      _stream
-                                                          .routes[prediction
-                                                              .routeId]
-                                                          ?.directionDestinations?[prediction
-                                                          .directionId],
-                                                );
-                                              })
-                                              .toList(),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                      ),
-                    ),
-                  ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(width: 0.1)),
+                ),
+                child: ListView(
+                  children:
+                      _predictions
+                          .map(
+                            (prediction) => Container(
+                              decoration: const BoxDecoration(
+                                border: Border(bottom: BorderSide(width: 0.1)),
+                              ),
+                              child: VehicleListTile(
+                                icon: Icon(prediction.icon),
+                                arrivalTime: prediction.arrivalTime,
+                                routeBadge: prediction.routeBadge,
+                                delay: prediction.delay?.inMinutes,
+                                stopStatus: prediction.status,
+                                direction:
+                                    _stream
+                                        .routes[prediction.routeId]
+                                        ?.directionNames?[prediction
+                                        .directionId],
+                                destination:
+                                    _stream
+                                        .routes[prediction.routeId]
+                                        ?.directionDestinations?[prediction
+                                        .directionId],
+                              ),
+                            ),
+                          )
+                          .toList(),
                 ),
               ),
             ),

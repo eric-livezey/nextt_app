@@ -90,8 +90,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             hint: Text('Choose a line'),
                             items: const [
-                              DropdownMenuItem(value: 'Red Ashmont', child: Text('Red Line - Ashmont Branch')),
-                              DropdownMenuItem(value: 'Red Braintree', child: Text('Red Line - Braintree Branch')),
+                              DropdownMenuItem(value: 'Red Line - Braintree/Ashmont', child: Text('Red Line - Braintree/Ashmont')),
+                              DropdownMenuItem(value: 'Mattapan Trolley', child: Text('Mattapan Trolley')),
                               DropdownMenuItem(value: 'Orange', child: Text('Orange Line')),
                               DropdownMenuItem(value: 'Blue', child: Text('Blue Line')),
                               DropdownMenuItem(value: 'Green B', child: Text('Green Line - B Branch')),
