@@ -225,17 +225,6 @@ class VehicleListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> titleWidgets = [];
-    if (routeBadge != null) {
-      titleWidgets.add(routeBadge!);
-    }
-    final List<Widget> statusWidgets = [];
-    if (stopStatus != null) {
-      statusWidgets.addAll([
-        Text(_resolveStopStatusText(stopStatus!)),
-        // Text(' • '),
-      ]);
-    }
     // if (delay == null) {
     //   statusWidgets.add(const Text('Unscheduled'));
     // } else if (delay == 0) {
@@ -259,14 +248,16 @@ class VehicleListTile extends StatelessWidget {
       leading: icon,
       title: Align(
         alignment: Alignment.centerLeft,
-        child: Row(children: titleWidgets),
+        child: Row(children: [if (routeBadge != null) routeBadge!]),
       ),
       subtitle: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: statusWidgets,
+            children: [
+              if (stopStatus != null) Text(_resolveStopStatusText(stopStatus!)),
+            ],
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -432,8 +423,8 @@ class _StopSheetState extends State<StopSheet> {
   }
 
   _onAlertReset(Iterable<Alert> alerts) {
-    _alerts.clear();
     _selectedAlertIndex = 0;
+    _alerts.clear();
     _onAlertAdd(alerts);
   }
 
@@ -441,7 +432,9 @@ class _StopSheetState extends State<StopSheet> {
     setState(() {
       for (final Alert alert in alerts.where(
         (alert) => alert.informedEntity.any(
-          (entity) => _stopIds.contains(entity.stop),
+          (entity) =>
+              _stopIds.contains(entity.stop) &&
+              (entity.route == null || widget.routeIds.contains(entity.route)),
         ),
       )) {
         _alerts[alert.id] = alert;
