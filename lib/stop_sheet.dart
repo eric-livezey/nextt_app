@@ -89,36 +89,47 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
 }
 
 class AlertBox extends StatelessWidget {
-  const AlertBox({super.key, required this.shortText, required this.longText});
+  const AlertBox({
+    super.key,
+    required this.shortText,
+    this.longText,
+    this.onCaretTap,
+  });
+
   final String shortText;
-  final String longText;
+  final String? longText;
+  final VoidCallback? onCaretTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder:
-              (_) => AlertDialog(
-                content: Text(longText),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
-                scrollable: true,
-              ),
-        );
-      },
+      onTap:
+          longText != null
+              ? () {
+                showDialog(
+                  context: context,
+                  builder:
+                      (_) => AlertDialog(
+                        title: const Text('Details'),
+                        content: Text(longText!),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
+                        scrollable: true,
+                      ),
+                );
+              }
+              : null,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.orange.shade50,
           border: Border.all(color: Colors.orange, width: 1.5),
           borderRadius: BorderRadius.circular(8),
         ),
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           children: [
             const Padding(
@@ -130,16 +141,23 @@ class AlertBox extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    shortText,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
-                  ),
-                ],
+              child: Text(
+                shortText,
+                style: const TextStyle(fontSize: 12, color: Colors.black87),
               ),
             ),
+            if (onCaretTap != null)
+              GestureDetector(
+                onTap: onCaretTap,
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 24,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -301,6 +319,7 @@ class _StopSheetState extends State<StopSheet> {
   final Set<String> _vehicleIds = {};
   final List<VehiclePrediction> _predictions = [];
   final Map<String, Alert> _alerts = {};
+  int _selectedAlertIndex = 0;
   Stop? _stop;
   bool _isFavorited = false;
 
@@ -414,6 +433,7 @@ class _StopSheetState extends State<StopSheet> {
 
   _onAlertReset(Iterable<Alert> alerts) {
     _alerts.clear();
+    _selectedAlertIndex = 0;
     _onAlertAdd(alerts);
   }
 
@@ -440,6 +460,7 @@ class _StopSheetState extends State<StopSheet> {
           _alerts.remove(alertId);
         }
       }
+      _selectedAlertIndex = 0;
     });
   }
 
@@ -559,7 +580,7 @@ class _StopSheetState extends State<StopSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final Alert? alert = _alerts.values.firstOrNull;
+    final List<Alert> alerts = _alerts.values.toList();
     final ThemeData theme = Theme.of(context);
     return SizedBox.expand(
       child: Container(
@@ -623,13 +644,26 @@ class _StopSheetState extends State<StopSheet> {
                 ),
               ],
             ),
+            // Alert Box
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child:
-                  alert != null
+                  alerts.isNotEmpty
                       ? AlertBox(
-                        shortText: alert.header!,
-                        longText: alert.description!,
+                        shortText: alerts[_selectedAlertIndex].header!,
+                        longText: alerts[_selectedAlertIndex].description,
+                        onCaretTap:
+                            alerts.length > 1
+                                ? () {
+                                  int index = _selectedAlertIndex + 1;
+                                  if (index >= _alerts.length) {
+                                    index = 0;
+                                  }
+                                  setState(() {
+                                    _selectedAlertIndex = index;
+                                  });
+                                }
+                                : null,
                       )
                       : null,
             ),
