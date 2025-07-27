@@ -579,6 +579,7 @@ class Schedule extends Resource {
   const Schedule({
     required super.id,
     required this.stopId,
+    required this.routeId,
     this.timepoint,
     this.stopSequence,
     this.stopHeadsign,
@@ -590,6 +591,7 @@ class Schedule extends Resource {
   });
 
   final String stopId;
+  final String routeId;
   final bool? timepoint;
   final int? stopSequence;
   final String? stopHeadsign;
@@ -621,6 +623,7 @@ class Schedule extends Resource {
     return Schedule(
       id: jsonMap['id'] as String,
       stopId: jsonMap['stopId'] as String,
+      routeId: jsonMap['routeId'] as String,
       timepoint: json['timePoint'] as bool?,
       stopSequence: jsonMap['stopSequence'] as int?,
       stopHeadsign: jsonMap['stopHeadsign'] as String?,
