@@ -59,13 +59,20 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
   factory VehiclePrediction.fromPrediction({
     required Prediction prediction,
     required Route route,
+<<<<<<< HEAD
     required Vehicle vehicle,
+=======
+    Vehicle? vehicle,
+>>>>>>> 04342242f68be7cb24ae2319f07bf304bc1718b7
     Schedule? schedule,
   }) {
     final int directionId = prediction.directionId!;
     return VehiclePrediction(
+<<<<<<< HEAD
       predictionId: prediction.id,
       vehicleId: vehicle.id,
+=======
+>>>>>>> 04342242f68be7cb24ae2319f07bf304bc1718b7
       directionId: prediction.directionId!,
       direction: route.directionNames?[directionId],
       destination: route.directionDestinations?[directionId],
@@ -73,11 +80,16 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
       departureTime: prediction.departureTime,
       icon: route.iconData,
       routeBadge: RouteBadge.fromRoute(route),
+<<<<<<< HEAD
       label: vehicle.label,
       status:
           vehicle.currentStatus != null
               ? _resolveStopStatusText(vehicle.currentStatus!)
               : null,
+=======
+      label: vehicle?.label,
+      status: vehicle?.currentStatus != null ? _resolveStopStatusText(vehicle!.currentStatus!) : null,
+>>>>>>> 04342242f68be7cb24ae2319f07bf304bc1718b7
       delay: schedule?.arrivalTime?.difference(prediction.arrivalTime!),
     );
   }
@@ -88,7 +100,10 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
   }) {
     final int directionId = schedule.directionId!;
     return VehiclePrediction(
+<<<<<<< HEAD
       scheduleId: schedule.id,
+=======
+>>>>>>> 04342242f68be7cb24ae2319f07bf304bc1718b7
       directionId: schedule.directionId!,
       direction: route.directionNames?[directionId],
       destination: route.directionDestinations?[directionId],
@@ -277,7 +292,13 @@ class VehicleListTile extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
+<<<<<<< HEAD
             children: [if (vehicleStatus != null) Text(vehicleStatus!)],
+=======
+            children: [
+              if (vehicleStatus != null) Text(vehicleStatus!),
+            ],
+>>>>>>> 04342242f68be7cb24ae2319f07bf304bc1718b7
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -326,8 +347,6 @@ class _StopSheetState extends State<StopSheet> {
   late bool _isTempStream = false;
   Set<String> _stopIds = {};
 
-  /// store which vehicles are being tracked to avoid duplicates
-  final Set<String> _vehicleIds = {};
   final List<VehiclePrediction> _predictions = [];
   final Map<String, Alert> _alerts = {};
   int _selectedAlertIndex = 0;
@@ -535,18 +554,9 @@ class _StopSheetState extends State<StopSheet> {
   void _onPredictionRemove(Iterable<String> predictionIds) {
     setState(() {
       final Set<String> predictionIdSet = predictionIds.toSet();
-      int index = 0;
-      while (index >= 0) {
-        index = _predictions.indexWhere(
-          (prediction) => predictionIdSet.contains(prediction.predictionId),
-          index,
-        );
-        if (index >= 0) {
-          final VehiclePrediction prediction = _predictions[index];
-          _predictions.removeAt(index);
-          _vehicleIds.remove(prediction.vehicleId);
-        }
-      }
+      _predictions.removeWhere(
+        (prediction) => predictionIdSet.contains(prediction.predictionId),
+      );
     });
   }
 
@@ -565,8 +575,7 @@ class _StopSheetState extends State<StopSheet> {
             ? _stream.schedules[prediction.scheduleId]
             : null;
     // if the prediction is not missing important fields or related resources
-    if (vehicle != null &&
-        route != null &&
+    if (route != null &&
         prediction.arrivalTime != null &&
         prediction.directionId != null) {
       final VehiclePrediction vp = VehiclePrediction.fromPrediction(
@@ -578,6 +587,7 @@ class _StopSheetState extends State<StopSheet> {
       final int index = _predictions.indexWhere(
         (other) => vp.compareTo(other) <= 0,
       );
+<<<<<<< HEAD
       if (_vehicleIds.contains(vehicle.id)) {
         _onPredictionRemove([prediction.id]);
       }
@@ -587,6 +597,13 @@ class _StopSheetState extends State<StopSheet> {
       } else {
         _predictions.add(vp);
       }
+=======
+      if (index >= 0) {
+        _predictions.insert(index, vp);
+      } else {
+        _predictions.add(vp);
+      }
+>>>>>>> 04342242f68be7cb24ae2319f07bf304bc1718b7
     }
   }
 
