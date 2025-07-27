@@ -51,7 +51,7 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
   final IconData icon;
   final RouteBadge routeBadge;
   final String? label;
-  final VehicleStopStatus? status;
+  final String? status;
   Duration? delay;
 
   factory VehiclePrediction.fromPrediction({
@@ -70,7 +70,7 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
       icon: route.iconData,
       routeBadge: RouteBadge.fromRoute(route),
       label: vehicle?.label,
-      status: vehicle?.currentStatus,
+      status: vehicle?.currentStatus != null ? _resolveStopStatusText(vehicle!.currentStatus!) : null,
       delay: schedule?.arrivalTime?.difference(prediction.arrivalTime!),
     );
   }
@@ -86,6 +86,7 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
       destination: route.directionDestinations?[directionId],
       arrivalTime: schedule.arrivalTime!,
       departureTime: schedule.departureTime,
+      status: 'Scheduled',
       icon: route.iconData,
       routeBadge: RouteBadge.fromRoute(route),
     );
@@ -223,7 +224,7 @@ class VehicleListTile extends StatelessWidget {
     required this.arrivalTime,
     this.routeBadge,
     this.occupancyStatus,
-    this.stopStatus,
+    this.vehicleStatus,
     this.delay,
     this.direction,
     this.destination,
@@ -233,7 +234,7 @@ class VehicleListTile extends StatelessWidget {
   final DateTime arrivalTime;
   final RouteBadge? routeBadge;
   final OccupancyStatus? occupancyStatus;
-  final VehicleStopStatus? stopStatus;
+  final String? vehicleStatus;
   final int? delay;
   final String? direction;
   final String? destination;
@@ -269,7 +270,7 @@ class VehicleListTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (stopStatus != null) Text(_resolveStopStatusText(stopStatus!)),
+              if (vehicleStatus != null) Text(vehicleStatus!),
             ],
           ),
           Row(
@@ -701,7 +702,7 @@ class _StopSheetState extends State<StopSheet> {
                                 arrivalTime: prediction.arrivalTime,
                                 routeBadge: prediction.routeBadge,
                                 delay: prediction.delay?.inMinutes,
-                                stopStatus: prediction.status,
+                                vehicleStatus: prediction.status,
                                 direction: prediction.direction,
                                 destination: prediction.destination,
                               ),
