@@ -27,11 +27,12 @@ String _resolveStopStatusText(VehicleStopStatus status) {
 /// Represents a vehicle prediction on a route towards a stop.
 class VehiclePrediction implements Comparable<VehiclePrediction> {
   VehiclePrediction({
-    required this.predictionId,
-    required this.vehicleId,
-    required this.routeId,
+    this.predictionId,
     this.scheduleId,
+    this.vehicleId,
     required this.directionId,
+    this.direction,
+    this.destination,
     required this.arrivalTime,
     this.departureTime,
     required this.icon,
@@ -41,38 +42,61 @@ class VehiclePrediction implements Comparable<VehiclePrediction> {
     this.delay,
   });
 
-  final String predictionId;
-  final String vehicleId;
-  final String routeId;
+  final String? predictionId;
   final String? scheduleId;
+  final String? vehicleId;
   final int directionId;
+  final String? direction;
+  final String? destination;
   final DateTime arrivalTime;
   final DateTime? departureTime;
   final IconData icon;
   final RouteBadge routeBadge;
   final String? label;
-  final VehicleStopStatus? status;
+  final String? status;
   Duration? delay;
 
-  factory VehiclePrediction.from(
-    Prediction prediction,
-    Vehicle vehicle,
-    Route route,
+  factory VehiclePrediction.fromPrediction({
+    required Prediction prediction,
+    required Route route,
+    required Vehicle vehicle,
     Schedule? schedule,
-  ) {
+  }) {
+    final int directionId = prediction.directionId!;
     return VehiclePrediction(
       predictionId: prediction.id,
       vehicleId: vehicle.id,
-      routeId: route.id,
-      scheduleId: prediction.scheduleId,
       directionId: prediction.directionId!,
+      direction: route.directionNames?[directionId],
+      destination: route.directionDestinations?[directionId],
       arrivalTime: prediction.arrivalTime!,
       departureTime: prediction.departureTime,
       icon: route.iconData,
       routeBadge: RouteBadge.fromRoute(route),
       label: vehicle.label,
-      status: vehicle.currentStatus,
+      status:
+          vehicle.currentStatus != null
+              ? _resolveStopStatusText(vehicle.currentStatus!)
+              : null,
       delay: schedule?.arrivalTime?.difference(prediction.arrivalTime!),
+    );
+  }
+
+  factory VehiclePrediction.fromSchedule({
+    required Schedule schedule,
+    required Route route,
+  }) {
+    final int directionId = schedule.directionId!;
+    return VehiclePrediction(
+      scheduleId: schedule.id,
+      directionId: schedule.directionId!,
+      direction: route.directionNames?[directionId],
+      destination: route.directionDestinations?[directionId],
+      arrivalTime: schedule.arrivalTime!,
+      departureTime: schedule.departureTime,
+      status: 'Scheduled',
+      icon: route.iconData,
+      routeBadge: RouteBadge.fromRoute(route),
     );
   }
 
@@ -208,7 +232,7 @@ class VehicleListTile extends StatelessWidget {
     required this.arrivalTime,
     this.routeBadge,
     this.occupancyStatus,
-    this.stopStatus,
+    this.vehicleStatus,
     this.delay,
     this.direction,
     this.destination,
@@ -218,27 +242,14 @@ class VehicleListTile extends StatelessWidget {
   final DateTime arrivalTime;
   final RouteBadge? routeBadge;
   final OccupancyStatus? occupancyStatus;
-  final VehicleStopStatus? stopStatus;
+  final String? vehicleStatus;
   final int? delay;
   final String? direction;
   final String? destination;
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> titleWidgets = [];
-    if (routeBadge != null) {
-      titleWidgets.add(routeBadge!);
-    }
-    final List<Widget> statusWidgets = [];
-    if (stopStatus != null) {
-      statusWidgets.addAll([
-        Text(_resolveStopStatusText(stopStatus!)),
-        // Text(' • '),
-      ]);
-    }
-    // if (delay == null) {
-    //   statusWidgets.add(const Text('Unscheduled'));
-    // } else if (delay == 0) {
+    // if (delay == null || delay == 0) {
     //   statusWidgets.add(const Text('Scheduled'));
     // } else if (delay! > 0) {
     //   statusWidgets.add(
@@ -259,14 +270,14 @@ class VehicleListTile extends StatelessWidget {
       leading: icon,
       title: Align(
         alignment: Alignment.centerLeft,
-        child: Row(children: titleWidgets),
+        child: Row(children: [if (routeBadge != null) routeBadge!]),
       ),
       subtitle: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: statusWidgets,
+            children: [if (vehicleStatus != null) Text(vehicleStatus!)],
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -432,8 +443,8 @@ class _StopSheetState extends State<StopSheet> {
   }
 
   _onAlertReset(Iterable<Alert> alerts) {
-    _alerts.clear();
     _selectedAlertIndex = 0;
+    _alerts.clear();
     _onAlertAdd(alerts);
   }
 
@@ -441,7 +452,9 @@ class _StopSheetState extends State<StopSheet> {
     setState(() {
       for (final Alert alert in alerts.where(
         (alert) => alert.informedEntity.any(
-          (entity) => _stopIds.contains(entity.stop),
+          (entity) =>
+              _stopIds.contains(entity.stop) &&
+              (entity.route == null || widget.routeIds.contains(entity.route)),
         ),
       )) {
         _alerts[alert.id] = alert;
@@ -469,18 +482,15 @@ class _StopSheetState extends State<StopSheet> {
   }
 
   void _onScheduleAdd(Iterable<Schedule> schedules) {
-    for (final Schedule schedule in schedules) {
-      final int index = _predictions.indexWhere(
-        (prediction) => prediction.scheduleId == schedule.id,
-      );
-      final VehiclePrediction? prediction =
-          index >= 0 ? _predictions.elementAtOrNull(index) : null;
-      if (prediction != null) {
-        prediction.delay = schedule.arrivalTime?.difference(
-          prediction.arrivalTime,
-        );
+    setState(() {
+      for (final Schedule schedule in schedules.where(
+        (schedule) =>
+            _stopIds.contains(schedule.stopId) &&
+            widget.routeIds.contains(schedule.routeId),
+      )) {
+        _insertScheduleInOrder(schedule);
       }
-    }
+    });
   }
 
   void _onScheduleUpdate(Iterable<Schedule> schedules) {
@@ -488,12 +498,12 @@ class _StopSheetState extends State<StopSheet> {
   }
 
   void _onScheduleRemove(Iterable<String> scheduleIds) {
-    final Set<String> scheduleIdSet = scheduleIds.toSet();
-    for (final VehiclePrediction prediction in _predictions.where(
-      (prediction) => scheduleIdSet.contains(prediction.scheduleId),
-    )) {
-      prediction.delay = null;
-    }
+    setState(() {
+      final Set<String> scheduleIdSet = scheduleIds.toSet();
+      _predictions.removeWhere(
+        (prediction) => scheduleIdSet.contains(prediction.scheduleId),
+      );
+    });
   }
 
   void _onPredictionReset(Iterable<Prediction> predictions) {
@@ -504,7 +514,9 @@ class _StopSheetState extends State<StopSheet> {
   void _onPredictionAdd(Iterable<Prediction> predictions) {
     setState(() {
       for (final Prediction prediction in predictions.where(
-        (prediction) => _stopIds.contains(prediction.stopId),
+        (prediction) =>
+            _stopIds.contains(prediction.stopId) &&
+            widget.routeIds.contains(prediction.routeId),
       )) {
         _insertPredictionInOrder(prediction);
       }
@@ -512,12 +524,12 @@ class _StopSheetState extends State<StopSheet> {
   }
 
   void _onPredictionUpdate(List<Prediction> predictions) {
-    for (final Prediction prediction in predictions) {
-      _onPredictionRemove([prediction.id]);
-      setState(() {
+    setState(() {
+      for (final Prediction prediction in predictions) {
+        _onPredictionRemove([prediction.id]);
         _insertPredictionInOrder(prediction);
-      });
-    }
+      }
+    });
   }
 
   void _onPredictionRemove(Iterable<String> predictionIds) {
@@ -557,19 +569,44 @@ class _StopSheetState extends State<StopSheet> {
         route != null &&
         prediction.arrivalTime != null &&
         prediction.directionId != null) {
-      final VehiclePrediction vp = VehiclePrediction.from(
-        prediction,
-        vehicle,
-        route,
-        schedule,
+      final VehiclePrediction vp = VehiclePrediction.fromPrediction(
+        prediction: prediction,
+        route: route,
+        vehicle: vehicle,
+        schedule: schedule,
       );
       final int index = _predictions.indexWhere(
         (other) => vp.compareTo(other) <= 0,
       );
-      if (_vehicleIds.contains(vp.vehicleId)) {
-        _onPredictionRemove([vp.predictionId]);
+      if (_vehicleIds.contains(vehicle.id)) {
+        _onPredictionRemove([prediction.id]);
       }
-      _vehicleIds.add(vp.vehicleId);
+      _vehicleIds.add(vehicle.id);
+      if (index >= 0) {
+        _predictions.insert(index, vp);
+      } else {
+        _predictions.add(vp);
+      }
+    }
+  }
+
+  /// insert schedule in order
+  void _insertScheduleInOrder(Schedule schedule) {
+    final Route? route =
+        _stop?.routeIds.contains(schedule.routeId) ?? false
+            ? _stream.routes[schedule.routeId]
+            : null;
+    // if the prediction is not missing important fields or related resources
+    if (route != null &&
+        schedule.arrivalTime != null &&
+        schedule.directionId != null) {
+      final VehiclePrediction vp = VehiclePrediction.fromSchedule(
+        schedule: schedule,
+        route: route,
+      );
+      final int index = _predictions.indexWhere(
+        (other) => vp.compareTo(other) <= 0,
+      );
       if (index >= 0) {
         _predictions.insert(index, vp);
       } else {
@@ -689,17 +726,9 @@ class _StopSheetState extends State<StopSheet> {
                                 arrivalTime: prediction.arrivalTime,
                                 routeBadge: prediction.routeBadge,
                                 delay: prediction.delay?.inMinutes,
-                                stopStatus: prediction.status,
-                                direction:
-                                    _stream
-                                        .routes[prediction.routeId]
-                                        ?.directionNames?[prediction
-                                        .directionId],
-                                destination:
-                                    _stream
-                                        .routes[prediction.routeId]
-                                        ?.directionDestinations?[prediction
-                                        .directionId],
+                                vehicleStatus: prediction.status,
+                                direction: prediction.direction,
+                                destination: prediction.destination,
                               ),
                             ),
                           )
