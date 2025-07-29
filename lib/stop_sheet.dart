@@ -377,7 +377,8 @@ class _StopSheetState extends State<StopSheet> {
       _isTempStream = true;
     }
     // set _isFavorited if applicable
-    if (widget.routeIds.length == 1) {
+    if (widget.routeIds.length == 1 &&
+        favoritableRoutes.contains(widget.routeIds.first)) {
       FavoritesService.containsFavorite(
         widget.stopId,
         widget.routeIds.first,
