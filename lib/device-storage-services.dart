@@ -1,5 +1,7 @@
+import 'package:nextt_app/t_stops.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+
 
 
 // FEATURES
@@ -36,6 +38,25 @@ class FavoritesService {
     if (!favorites.contains(stopWithColor)) {
       favorites.add(stopWithColor);
       await storageReference.setStringList(_favoritesKey, favorites);
+    }
+  }
+
+  // Collect stop info to store a favorite from map
+  static Future<bool> addFavoriteFromMap(String stopId, String routeId, String stopName) async {
+    // Try to find the corresponding TrainStop
+    final trainStop = findTrainStopByIds(stopId, routeId);
+    
+    if (trainStop != null) {
+      await addFavorite(
+        trainStop.name,
+        trainStop.color,
+        trainStop.routeId,
+        trainStop.routeId,
+        trainStop.stopId,
+      );
+      return true;
+    } else {
+      return false;
     }
   }
 

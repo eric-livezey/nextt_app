@@ -634,6 +634,8 @@ class _StopSheetState extends State<StopSheet> {
                       onPressed: () {
                         setState(() {
                           _isFavorited = !_isFavorited;
+
+                          
                         });
                       },
                       icon: Icon(

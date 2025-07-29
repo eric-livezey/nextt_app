@@ -13,6 +13,29 @@ const Color orangeLineColor = Color.fromARGB(204, 255, 153, 0);
 const Color blueLineColor = Color.fromARGB(204, 0, 0, 255);
 const Color redLineColor = Color.fromARGB(204, 255, 0, 0);
 
+final Map<String, TrainStop> _stopLookupMap = () {
+  final map = <String, TrainStop>{};
+  final allStops = [
+    ...greenBStops,
+    ...greenCStops,
+    ...greenDStops,
+    ...greenEStops,
+    ...orangeStops,
+    ...blueStops,
+    ...redLineStops,
+    ...mattapanTrolleyStops,
+  ];
+  
+  for (final stop in allStops) {
+    map['${stop.stopId}_${stop.routeId}'] = stop;
+  }
+  return map;
+}();
+
+TrainStop? findTrainStopByIds(String stopId, String routeId) {
+  return _stopLookupMap['${stopId}_$routeId'];
+}
+
 // GREEN B Line stops
 final List<TrainStop> greenBStops = [
   TrainStop("Boston College", greenLineColor, "Green-B", "place-lake"),
