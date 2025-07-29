@@ -36,6 +36,7 @@ TrainStop? findTrainStopByIds(String stopId, String routeId) {
   return _stopLookupMap['${stopId}_$routeId'];
 }
 
+// Used by device-storage-services to get the route string for the UI
 String getLineFromRouteId(String routeId) {
   switch (routeId) {
     case 'Green-B':

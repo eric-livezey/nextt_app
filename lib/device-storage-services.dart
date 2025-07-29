@@ -50,7 +50,7 @@ class FavoritesService {
       await addFavorite(
         trainStop.name,
         trainStop.color,
-        getLineFromRouteId(trainStop.routeId),
+        getLineFromRouteId(trainStop.routeId), // Used for adding exact string for UI to display
         trainStop.routeId,
         trainStop.stopId,
       );
