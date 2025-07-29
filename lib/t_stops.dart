@@ -36,6 +36,29 @@ TrainStop? findTrainStopByIds(String stopId, String routeId) {
   return _stopLookupMap['${stopId}_$routeId'];
 }
 
+String getLineFromRouteId(String routeId) {
+  switch (routeId) {
+    case 'Green-B':
+      return 'Green B';
+    case 'Green-C':
+      return 'Green C';
+    case 'Green-D':
+      return 'Green D';
+    case 'Green-E':
+      return 'Green E';
+    case 'Orange':
+      return 'Orange';
+    case 'Blue':
+      return 'Blue';
+    case 'Red':
+      return 'Red Line - Braintree/Ashmont';
+    case 'Mattapan':
+      return 'Mattapan Trolley';
+    default:
+      return routeId; // fallback
+  }
+}
+
 // GREEN B Line stops
 final List<TrainStop> greenBStops = [
   TrainStop("Boston College", greenLineColor, "Green-B", "place-lake"),
