@@ -42,7 +42,7 @@ class FavoritesService {
   }
 
   // Collect stop info to store a favorite from map
-  static Future<bool> addFavoriteFromMap(String stopId, String routeId, String stopName) async {
+  static Future<bool> addFavoriteFromMap(String stopId, String routeId) async {
     // Try to find the corresponding TrainStop
     final trainStop = findTrainStopByIds(stopId, routeId);
     
