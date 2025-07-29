@@ -16,6 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late Color lineColor = redLineColor;
   late String selectedLine = 'Red Line - Braintree/Ashmont';
   late List<TrainStop> currentStops = redLineStops;
+  PersistentBottomSheetController? _stopSheetController;
 
   // Dropdown items
   static List<DropdownMenuItem<String>> dropdownItems = [
@@ -42,10 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
     DropdownMenuItem(
       value: 'Blue',
-      child: _DropdownItemWithColor(
-        text: 'Blue Line',
-        color: blueLineColor,
-      ),
+      child: _DropdownItemWithColor(text: 'Blue Line', color: blueLineColor),
     ),
     DropdownMenuItem(
       value: 'Green B',
@@ -89,6 +87,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _stopSheetController?.close();
+    super.dispose();
+  }
+
   void _onLineChanged(String? value) {
     if (value == null) return;
     setState(() {
@@ -122,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
       else if (value == 'Red Line - Braintree/Ashmont') {
         currentStops = redLineStops;
         lineColor = redLineColor;
-      } 
+      }
       // MATTAPAN TROLLEY
       else if (value == 'Mattapan Trolley') {
         currentStops = mattapanTrolleyStops;
@@ -177,7 +181,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 4.0),
+                        horizontal: 16.0,
+                        vertical: 4.0,
+                      ),
                       child: Row(
                         children: [
                           // --- DROP DOWN MENNU ---
@@ -193,9 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.w500,
                               ),
                               iconStyleData: IconStyleData(
-                                icon: const Icon(
-                                  Icons.expand_more,
-                                ),
+                                icon: const Icon(Icons.expand_more),
                                 iconSize: 24,
                                 iconEnabledColor: lineColor,
                                 iconDisabledColor: lineColor,
@@ -207,7 +211,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   borderRadius: BorderRadius.circular(12.0),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.4),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.4,
+                                      ),
                                       blurRadius: 16,
                                       offset: const Offset(0, 8),
                                     ),
@@ -247,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: InkWell(
                               onTap: () {
                                 // Open StopSheet instead of dialog
-                                showBottomSheet(
+                                _stopSheetController = showBottomSheet(
                                   context: context,
                                   constraints: BoxConstraints.loose(
                                     Size(
@@ -255,17 +261,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                       MediaQuery.of(context).size.height / 2.0,
                                     ),
                                   ),
-                                  builder: (context) => StopSheet.fromStopId(
-                                    trainstop.stopId,
-                                    {trainstop.routeId},
-                                  ),
+                                  builder:
+                                      (context) => StopSheet.fromStopId(
+                                        stopId: trainstop.stopId,
+                                        routeIds: {trainstop.routeId},
+                                      ),
                                 );
                               },
                               onLongPress: () {
-                                FavoritesService.addFavorite(trainstop.name, trainstop.color, selectedLine, trainstop.routeId, trainstop.stopId);
+                                FavoritesService.addFavorite(
+                                  trainstop.name,
+                                  trainstop.color,
+                                  selectedLine,
+                                  trainstop.routeId,
+                                  trainstop.stopId,
+                                );
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${trainstop.name} added to favorites!'),
+                                    content: Text(
+                                      '${trainstop.name} added to favorites!',
+                                    ),
                                   ),
                                 );
                               },
@@ -280,16 +295,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: lineColor,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.train,
-                                        color: Colors.white),
+                                    child: const Icon(
+                                      Icons.train,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Text(trainstop.name,
-                              style: const TextStyle(fontSize: 16)),
+                          Text(
+                            trainstop.name,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         ],
                       ),
                     ),
@@ -309,10 +328,7 @@ class _DropdownItemWithColor extends StatelessWidget {
   final String text;
   final Color color;
 
-  const _DropdownItemWithColor({
-    required this.text,
-    required this.color,
-  });
+  const _DropdownItemWithColor({required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -332,10 +348,7 @@ class _DropdownItemWithColor extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
         ),
       ],

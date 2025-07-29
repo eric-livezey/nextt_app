@@ -9,12 +9,22 @@ import 'package:nextt_app/api.dart'
         Stop,
         Vehicle,
         VehicleStopStatus;
+import 'package:nextt_app/device-storage-services.dart';
 import 'package:nextt_app/duration_tile.dart' show DurationTile;
 import 'package:nextt_app/stream.dart'
     show ResourceFilter, ResourceStream, ResourceType;
 
-/// IDs of routes which are able to be favorited.
-const Set<String> favoritableRoutes = {};
+/// IDs of routes which are able to have favorited stops.
+const Set<String> favoritableRoutes = {
+  'Green-B',
+  'Green C',
+  'Green D',
+  'Green E',
+  'Orange',
+  'Blue',
+  'Red Line - Braintree/Ashmont',
+  'Mattapan',
+};
 
 String _resolveStopStatusText(VehicleStopStatus status) {
   return switch (status) {
@@ -305,14 +315,24 @@ class StopSheet extends StatefulWidget {
     required this.stopId,
     required this.routeIds,
     this.stream,
+    this.onFavoritedChange,
   });
 
   final String stopId;
   final Set<String> routeIds;
   final ResourceStream? stream;
+  final void Function(bool)? onFavoritedChange;
 
-  static fromStopId(String stopId, Set<String> routeIds) {
-    return StopSheet(stopId: stopId, routeIds: routeIds);
+  static fromStopId({
+    required String stopId,
+    required Set<String> routeIds,
+    void Function(bool)? onFavoritedChange,
+  }) {
+    return StopSheet(
+      stopId: stopId,
+      routeIds: routeIds,
+      onFavoritedChange: onFavoritedChange,
+    );
   }
 
   @override
@@ -332,7 +352,7 @@ class _StopSheetState extends State<StopSheet> {
   final Map<String, Alert> _alerts = {};
   int _selectedAlertIndex = 0;
   Stop? _stop;
-  bool _isFavorited = false;
+  bool? _isFavorited;
 
   @override
   void initState() {
@@ -355,6 +375,15 @@ class _StopSheetState extends State<StopSheet> {
         ),
       )..connect();
       _isTempStream = true;
+    }
+    // set _isFavorited if applicable
+    if (widget.routeIds.length == 1) {
+      FavoritesService.containsFavorite(
+        widget.stopId,
+        widget.routeIds.first,
+      ).then((value) {
+        _isFavorited = value;
+      });
     }
     // set initial resources
     _onStopReset(_stream.stops.values);
@@ -617,6 +646,7 @@ class _StopSheetState extends State<StopSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isFavorited = _isFavorited;
     final List<Alert> alerts = _alerts.values.toList();
     final ThemeData theme = Theme.of(context);
     return SizedBox.expand(
@@ -667,18 +697,36 @@ class _StopSheetState extends State<StopSheet> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _isFavorited = !_isFavorited;
-
-                          
-                        });
-                      },
-                      icon: Icon(
-                        _isFavorited ? Icons.favorite : Icons.favorite_outline,
+                    if (isFavorited != null)
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _isFavorited = !isFavorited;
+                            if (isFavorited) {
+                              FavoritesService.removeFavoriteFromMap(
+                                widget.stopId,
+                                widget.routeIds.first,
+                              ).then((_) {
+                                if (widget.onFavoritedChange != null) {
+                                  widget.onFavoritedChange!(!isFavorited);
+                                }
+                              });
+                            } else {
+                              FavoritesService.addFavoriteFromMap(
+                                widget.stopId,
+                                widget.routeIds.first,
+                              ).then((_) {
+                                if (widget.onFavoritedChange != null) {
+                                  widget.onFavoritedChange!(!isFavorited);
+                                }
+                              });
+                            }
+                          });
+                        },
+                        icon: Icon(
+                          isFavorited ? Icons.favorite : Icons.favorite_outline,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],

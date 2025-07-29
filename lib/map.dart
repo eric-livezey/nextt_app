@@ -259,8 +259,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
             ),
             builder:
                 (context) => StopSheet.fromStopId(
-                  markerId.value,
-                  stop.routeIds.intersection(
+                  stopId: markerId.value,
+                  routeIds: stop.routeIds.intersection(
                     _stream.filter.routeIds ??
                         _routes.values
                             .where(
