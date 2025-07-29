@@ -17,12 +17,12 @@ import 'package:nextt_app/stream.dart'
 /// IDs of routes which are able to have favorited stops.
 const Set<String> favoritableRoutes = {
   'Green-B',
-  'Green C',
-  'Green D',
-  'Green E',
+  'Green-C',
+  'Green-D',
+  'Green-E',
   'Orange',
   'Blue',
-  'Red Line - Braintree/Ashmont',
+  'Red',
   'Mattapan',
 };
 
