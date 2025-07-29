@@ -1,9 +1,6 @@
 import 'package:nextt_app/t_stops.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
-
-// read preferences only once
-final _preferences = SharedPreferences.getInstance();
+import 'package:shared_preferences/shared_preferences.dart';
 
 // FEATURES
 // 1. Save entire favorites list to persistent storage
@@ -17,13 +14,13 @@ class FavoritesService {
   // Save entire favorites list to persistent storage
   static Future<void> saveFavorites(List<String> favorites) async {
     // storageReference is a SharedPreferences instance
-    final storageReference = await _preferences;
+    final storageReference = await SharedPreferences.getInstance();
     await storageReference.setStringList(_favoritesKey, favorites);
   }
 
   // returns a list of favorite stops from persistent storage
   static Future<List<String>> getFavorites() async {
-    final storageReference = await _preferences;
+    final storageReference = await SharedPreferences.getInstance();
     List<String> favorites =
         storageReference.getStringList(_favoritesKey) ?? [];
     return favorites;
@@ -37,7 +34,7 @@ class FavoritesService {
     String routeId,
     String stopId,
   ) async {
-    final storageReference = await _preferences;
+    final storageReference = await SharedPreferences.getInstance();
     List<String> favorites =
         storageReference.getStringList(_favoritesKey) ?? [];
 
@@ -84,7 +81,7 @@ class FavoritesService {
 
   // Remove a favorite stop from the favorites list
   static Future<void> removeFavorite(String stop) async {
-    final storageReference = await _preferences;
+    final storageReference = await SharedPreferences.getInstance();
     List<String> favorites =
         storageReference.getStringList(_favoritesKey) ?? [];
 
@@ -107,7 +104,7 @@ class FavoritesService {
   }
 
   static Future<void> clearFavorites() async {
-    final storageReference = await _preferences;
+    final storageReference = await SharedPreferences.getInstance();
     await storageReference.remove(_favoritesKey);
   }
 }
@@ -117,13 +114,13 @@ class otherDeviceStorage {
 
   // Save the default line to persistent storage
   static Future<void> saveDefaultLine(String line) async {
-    final storageReference = await _preferences;
+    final storageReference = await SharedPreferences.getInstance();
     await storageReference.setString(_defaultLineKey, line);
   }
 
   // Get the default line from persistent storage
   static Future<String?> getDefaultLine() async {
-    final storageReference = await _preferences;
+    final storageReference = await SharedPreferences.getInstance();
     return storageReference.getString(_defaultLineKey);
   }
 }
